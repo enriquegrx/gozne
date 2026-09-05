@@ -16,10 +16,14 @@
       </p>
       <section aria-label="Iniciar sesión">
         <label for="evm-wallet">Wallet EVM</label>
-        <select id="evm-wallet">
+        <select id="evm-wallet" aria-describedby="evm-help">
           <option value="injected">Wallet del navegador</option>
         </select>
-        <button id="evm" type="button">Entrar con Ethereum</button>
+        <p id="evm-help" class="note">
+          Rabby, MetaMask y otras wallets EVM instaladas en este navegador. Si
+          no aparece la tuya, abre esta página en el navegador donde la usas.
+        </p>
+        <button id="evm" type="button">Entrar con mi wallet EVM</button>
         <label for="solana-chain">Red Solana</label>
         <select id="solana-chain">
           <option value="solana:mainnet">Mainnet</option>

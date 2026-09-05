@@ -21,7 +21,16 @@ services:
     volumes:
       - ../demo-app/server.mjs:/demo/server.mjs:ro
     healthcheck:
-      disable: true
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:8080').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   proxy:
     image: nginxinc/nginx-unprivileged:stable-alpine@sha256:9b87ad3dd9f431c733f19dfb278c7eb3dba9dca381942c79818bb42f1a566a83
     entrypoint: [nginx, -g, 'daemon off;']

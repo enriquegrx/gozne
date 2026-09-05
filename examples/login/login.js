@@ -9,11 +9,21 @@ let csrfToken = null;
 
 window.addEventListener('eip6963:announceProvider', (event) => {
   const { info, provider } = event.detail ?? {};
-  if (!info || !provider || providers.has(info.uuid)) return;
+  if (
+    typeof info?.uuid !== 'string' ||
+    typeof info?.name !== 'string' ||
+    typeof provider?.request !== 'function'
+  )
+    return;
+  if (providers.has(info.uuid)) {
+    providers.set(info.uuid, provider);
+    return;
+  }
   providers.set(info.uuid, provider);
   const option = document.createElement('option');
   option.value = info.uuid;
   option.textContent = String(info.name).slice(0, 80);
+  if (providers.size === 1) walletSelect.replaceChildren();
   walletSelect.append(option);
 });
 window.dispatchEvent(new window.Event('eip6963:requestProvider'));
@@ -59,7 +69,10 @@ async function busy(operation) {
 
 document.querySelector('#evm').addEventListener('click', () =>
   busy(async () => {
-    const provider = providers.get(walletSelect.value) ?? window.ethereum;
+    const provider =
+      walletSelect.value === 'injected'
+        ? window.ethereum
+        : providers.get(walletSelect.value);
     if (!provider?.request)
       throw new Error('No encuentro una wallet EVM en este navegador.');
     const [address] = await provider.request({ method: 'eth_requestAccounts' });

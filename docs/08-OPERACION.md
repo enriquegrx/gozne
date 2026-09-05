@@ -13,8 +13,13 @@ docker compose -f examples/compose/orbstack.yaml exec gateway gozne wallet attac
 Abre https://gozne.orb.local. OrbStack termina TLS delante del Nginx de la demo.
 Puede solicitar instalar su certificado local la primera vez. Para Solana, usa
 `solana` en el comando y una wallet con `signIn`. La demo soporta proveedores
-EVM EIP-6963 y Phantom para Solana. EVM usa Ethereum (chain ID 1); la política
-incluye Solana mainnet y devnet. La firma no envía una transacción.
+EVM EIP-6963 (Rabby, MetaMask y otros proveedores compatibles) y Phantom para
+Solana. Las extensiones deben estar instaladas en el navegador que abre la demo.
+La detección sigue la
+[integración oficial de Rabby](https://rabby.io/docs/integrating-rabby-wallet).
+La compatibilidad del protocolo no sustituye una prueba con cada extensión. EVM
+usa Ethereum (chain ID 1); la política incluye Solana mainnet y devnet. La firma
+no envía una transacción.
 
 Solo se autoriza la dirección pública que añadas. La identidad `example-user` ya
 tiene el rol `reader` para `demo`. El volumen `gozne-demo_state` conserva
