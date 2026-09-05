@@ -109,8 +109,9 @@ y 30 días. SQLite contiene los mensajes de desafío, direcciones y permisos;
 protege el volumen. Los logs no contienen firmas, cookies, cuerpos, URLs ni IPs.
 
 La [guía de recuperación](09-RECUPERACION.md) describe copias en caliente y
-restauración a una base nueva. Los ensayos de carga siguen pendientes. No se
-soporta degradar a un binario con esquema anterior.
+restauración a una base nueva. Las pruebas cortas de concurrencia y fallos están
+en la [guía de verificación](10-VERIFICACION.md); quedan ensayos de carga
+prolongada. No se soporta degradar a un binario con esquema anterior.
 
 ## Verificación
 
@@ -120,8 +121,9 @@ npm audit --audit-level=moderate
 docker build -t gozne:dev .
 node scripts/smoke-container.mjs
 node scripts/test-proxy.mjs
+node scripts/test-resilience.mjs
 ```
 
-La última prueba genera wallets efímeras y certificado temporal, verifica ambos
-logins por HTTPS, revocación, logout, cabeceras y denegación al parar Gozne.
-Limpia únicamente su propio proyecto Compose y sus datos sintéticos.
+La prueba de proxy genera wallets efímeras y certificado temporal, verifica
+ambos logins por HTTPS, revocación, logout, cabeceras y denegación al parar
+Gozne. Limpia únicamente su propio proyecto Compose y sus datos sintéticos.

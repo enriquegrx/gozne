@@ -73,6 +73,7 @@ Phantom. WalletConnect, smart wallets y OIDC quedan para más adelante.
   pasas.
 - 🗃️ SQLite persistente, migraciones, auditoría y copias verificadas por CLI.
 - 🐳 Contenedores sin root, Nginx y pruebas del flujo completo por HTTPS.
+- 🧪 Pruebas de caída, almacenamiento lleno y peticiones concurrentes.
 
 ## 🚀 Demo en Mac con OrbStack
 

@@ -39,7 +39,10 @@ autenticación se incorporó en la fase siguiente.
 - [x] Copia en caliente y recuperación sin reactivar sesiones antiguas.
 - [x] OpenAPI, quickstart, guía de proxy y recuperación.
 - [x] Inventario CycloneDX y escaneo de imagen en CI.
-- [ ] Completar matriz adversarial, carga y fallos físicos de persistencia.
+- [x] SIGKILL con escrituras en WAL y conservación de revocaciones confirmadas.
+- [x] Error real ENOSPC en almacenamiento acotado y recuperación sin reinicio.
+- [x] Concurrencia y límites por IP, con informe de latencias en CI.
+- [ ] Completar matriz adversarial, carga prolongada y pérdida de energía.
 - [ ] Reproducibilidad binaria y firma de artefactos de release.
 - [ ] Cerrar licencia y revisión de atribuciones; SECURITY y CONTRIBUTING ya
       existen.

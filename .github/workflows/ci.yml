@@ -31,6 +31,8 @@ jobs:
           docker build -t gozne:dev .
           node scripts/smoke-container.mjs
           node scripts/test-proxy.mjs
+      - name: Crash, full storage and concurrent requests
+        run: node scripts/test-resilience.mjs
       - name: Generate dependency inventory
         run: |
           mkdir -p reports
