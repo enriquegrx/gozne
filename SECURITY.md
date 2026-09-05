@@ -1,20 +1,20 @@
-# Seguridad
+# Security
 
-Gozne está en desarrollo. La versión actual es una alpha con autenticación
-EVM/Solana. Está destinada a pruebas y todavía no tiene soporte de producción.
+Gozne is alpha software for testing. There is no stable release, production
+support policy or external security audit. Automated tests do not replace an
+independent security review.
 
-## Comunicar un problema
+## Report a vulnerability
 
-Usa
-[el canal privado de GitHub](https://github.com/enriquegrx/gozne/security/advisories/new)
-para informar de una vulnerabilidad. Incluye una descripción, la revisión
-afectada y pasos de reproducción con datos sintéticos. No adjuntes claves,
-frases semilla, cookies ni datos de terceros.
+Use
+[GitHub's private reporting channel](https://github.com/enriquegrx/gozne/security/advisories/new).
+Include the affected revision, a description and reproduction steps with
+synthetic data. Do not attach private keys, seed phrases, cookies or third-party
+data. Do not disclose an unpatched vulnerability in a public issue.
 
-No publiques detalles de una vulnerabilidad sin corregir en una issue pública.
+## Supported versions
 
-## Estado de soporte
-
-Se trabaja sobre `main`; todavía no hay versiones estables ni una política de
-soporte para producción. El proyecto no ha pasado una auditoría de seguridad
-externa. Las pruebas automatizadas no sustituyen esa revisión.
+Development takes place on `main`. No production versions are currently
+supported. For the implemented safeguards and remaining limits, read the
+[threat model](docs/04-SECURITY.md) and
+[verification guide](docs/10-VERIFICATION.md).

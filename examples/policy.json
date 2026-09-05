@@ -10,6 +10,10 @@
     }
   ],
   "identities": [
-    { "id": "example-user", "wallets": [], "grants": { "demo": ["reader"] } }
+    {
+      "id": "example-user",
+      "wallets": [],
+      "grants": { "demo": ["reader", "admin"] }
+    }
   ]
 }

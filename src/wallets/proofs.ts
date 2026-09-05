@@ -9,6 +9,8 @@ import {
 
 export type Network = 'evm' | 'solana';
 export interface ChallengeFields {
+  statement?: string;
+  resources?: string[];
   nonce: string;
   application: string;
   network: Network;
@@ -38,7 +40,9 @@ export function signInInput(fields: ChallengeFields) {
   return {
     domain: new URL(fields.origin).host,
     address: fields.address,
-    statement: `Sign in to ${fields.application}. This does not request a transaction.`,
+    statement:
+      fields.statement ??
+      `Sign in to ${fields.application}. This does not request a transaction.`,
     uri: `${fields.origin}/`,
     version: '1',
     chainId: fields.chain,
@@ -46,7 +50,10 @@ export function signInInput(fields: ChallengeFields) {
     issuedAt: new Date(fields.issuedAt).toISOString(),
     expirationTime: new Date(fields.expiresAt).toISOString(),
     notBefore: new Date(fields.issuedAt).toISOString(),
-    resources: [`urn:gozne:application:${fields.application}`],
+    resources: [
+      `urn:gozne:application:${fields.application}`,
+      ...(fields.resources ?? []),
+    ],
   };
 }
 

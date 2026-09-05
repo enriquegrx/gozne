@@ -1,33 +1,40 @@
-# Colaborar con Gozne
+# Contributing to Gozne
 
-Para proponer cambios grandes, abre una issue explicando el problema antes de
-escribir la implementación. Para un fallo concreto, incluye cómo reproducirlo.
+For a substantial change, open an issue describing the problem before writing an
+implementation. For a bug, include steps to reproduce it with synthetic data.
 
-## Desarrollo
+## Development
 
-Necesitas Node 24.20.0 y npm. Con nvm: `nvm install && nvm use`.
+Use Node.js 24.20.0 and npm. With nvm: `nvm install` and `nvm use`.
 
 ```sh
 npm ci
 npm run check
 ```
 
-`npm run check` comprueba formato, lint, compilación y pruebas. Para aplicar el
-formato: `npm run format`. Las pruebas usan bases de datos temporales.
+`check` runs formatting, lint, compilation and tests. Use `npm run format` to
+apply formatting. Tests create temporary databases and ephemeral signing keys.
 
-Con Docker también puedes comprobar el contenedor:
+For changes to authentication, storage, containers or proxy behavior, also run:
 
 ```sh
 docker build -t gozne:dev .
 node scripts/smoke-container.mjs
+node scripts/test-proxy.mjs
+node scripts/test-resilience.mjs
 ```
 
-Los cambios de seguridad necesitan pruebas del comportamiento que corrigen. Usa
-exclusivamente datos sintéticos, dominios `.test` y claves efímeras creadas por
-los tests. Nunca añadas datos de producción.
+Security changes need behavioral tests that demonstrate the corrected failure.
+Use `.test` domains, synthetic identities and ephemeral test keys. Never commit
+production data, session cookies, wallet secrets or local database files.
 
-La licencia de distribución está pendiente de definición. Antes de enviar una
-contribución sustancial, consulta al mantenedor para aclarar sus condiciones.
+Keep README, OpenAPI and relevant guides in English. Describe what actually
+works and distinguish simulations from external effects. Document migrations and
+recovery implications when persistent state changes. Published migrations are
+immutable; add a new numbered migration instead of editing an old one.
 
-La [guía de operación](docs/08-OPERACION.md) documenta las pruebas HTTPS con
-wallets sintéticas y la demo en OrbStack.
+The distribution license is pending. Contact the maintainer before submitting a
+substantial contribution to clarify its terms.
+
+See [operations](docs/08-OPERATIONS.md) and
+[verification](docs/10-VERIFICATION.md) for the complete local workflow.

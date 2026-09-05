@@ -75,7 +75,9 @@ async function snapshot(source: string, destination: string, restore: boolean) {
         copy.exec('BEGIN IMMEDIATE');
         try {
           // Old cookies must not become valid again after restoring a pre-revocation snapshot.
-          copy.exec('DELETE FROM sessions; DELETE FROM nonces;');
+          copy.exec(
+            "DELETE FROM sessions; DELETE FROM nonces; DELETE FROM action_challenges; UPDATE actions SET status = 'canceled' WHERE status IN ('pending','approved'); UPDATE invitations SET revoked_at = COALESCE(revoked_at, 0);",
+          );
           copy
             .prepare('INSERT INTO audit(at, event) VALUES (?, ?)')
             .run(Date.now(), 'database.restored');

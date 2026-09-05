@@ -2,82 +2,81 @@
 
 # 🚪 Gozne
 
-**Firma. Gira. Entra.**
+**Sign. Turn. Enter.**
 
-Tu wallet abre la puerta. Tu servidor decide quién pasa.
+Your wallet opens the door. Your server decides what happens next.
 
 [![CI](https://github.com/enriquegrx/gozne/actions/workflows/ci.yml/badge.svg)](https://github.com/enriquegrx/gozne/actions/workflows/ci.yml)
-![Estado: en desarrollo](https://img.shields.io/badge/estado-en_desarrollo-eab308)
+![Stage: alpha](https://img.shields.io/badge/stage-alpha-eab308)
 ![Node.js 24](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-estricto-3178C6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 
 </div>
 
-Gozne es un proyecto de **autenticación web con wallets, alojado en tu propio
-servidor**. La idea: proteger una aplicación HTTP sin tener que meter lógica
-blockchain dentro de ella.
+Gozne is a **self-hosted wallet authentication gateway** with temporary access
+and signed approvals. Put it in front of an HTTP application, define who can
+enter, and keep control of sessions on your own server.
 
-El usuario firma un mensaje con su wallet. Gozne comprueba la firma, crea una
-sesión y le indica al proxy si puede dejarlo entrar. La aplicación recibe una
-identidad verificada y sigue a lo suyo.
+A wallet proves ownership by signing a message. Gozne checks it, creates an
+opaque session and tells the reverse proxy whether to let the request through.
+Your application receives a verified identity and roles. It needs no blockchain
+libraries or access to anyone's keys.
 
-> 🛠️ **Alpha funcional.** Ya hay login EVM y Solana, sesiones revocables,
-> permisos por aplicación y una demo con Nginx. Falta completar el
-> endurecimiento y la revisión para una versión estable.
+> 🛠️ **Working alpha.** EVM and Solana authentication, wallet-bound invitations
+> and a control panel are implemented. Signed deployment approvals run a
+> **simulation**: they record an effect in SQLite and never deploy
+> infrastructure. There is no stable release or external security audit yet.
 
-## ¿Para qué sirve?
+## A door for your tools 🔑
 
-Para poner una puerta común delante de varias herramientas: una documentación
-privada, un panel interno, una intranet o un servicio que has montado en casa.
-Si las personas que van a entrar ya usan wallets, no hace falta inventar otra
-contraseña para cada web.
+Private documentation, an internal dashboard, a small team portal, a service
+running at home: if your users already have wallets, they can use them to sign
+in without adding another password.
 
-Puedes elegir qué identidades entran a cada aplicación, asignarles roles y
-revocar una sesión desde tu servidor.
+Gozne also lets you try a more deliberate workflow:
 
-```text
-                  Firma un mensaje de acceso
-   👤 + wallet ─────────────────────────────────► Gozne
-                                                    │
-                                            Comprueba la firma
-                                            y crea una sesión
-                                                    │
-   Navegador ──► Nginx / Traefik ── consulta ──────────┘
-                       │
-                 Acceso permitido
-                       ▼
-                 Tu aplicación
-```
+1. **Invite a collaborator for 30 minutes.** The invitation belongs to their
+   public wallet address. Forwarding the URL gives someone else no access.
+2. **Let them request a deployment.** The request names the project, version and
+   environment.
+3. **Review and sign it.** An administrator signs that exact request, with an
+   action ID, payload hash and short expiry.
+4. **Execute it once.** The requesting session records the simulated deployment.
+   A second execution is rejected.
 
-La demo incluida implementa este flujo con Nginx.
+The owner and collaborator use separate browser profiles. The owner can also
+request and approve their own action for a quick single-wallet test; this is
+**not** a two-person approval rule.
 
-## 🔑 Firmar para entrar
+## What's included
 
-Gozne está orientado a wallets **EVM y Solana**. El acceso se basa en firmar un
-mensaje legible: dominio, propósito y caducidad del intento de login.
+- 👛 **Choose your wallet:** Rabby, MetaMask and other EIP-6963 EVM providers;
+  Phantom with Sign-In With Solana. The selector never silently switches
+  wallets.
+- 🍪 **Revocable sessions:** server-side state, secure host-only cookies,
+  application roles and CSRF protection.
+- ⏱️ **Temporary invitations:** reader access for a specific wallet, expiry and
+  immediate revocation, without rewriting the main policy.
+- ✍️ **Signed intent:** exact deployment parameters, fresh proof and one-time
+  execution of a local simulation.
+- 🖥️ **A responsive control panel:** invitations, requests and deployment
+  receipts, built with local HTML, CSS and JavaScript. No frontend framework or
+  CDN.
+- 🗃️ **SQLite and a CLI:** transactional migrations, policy administration,
+  audit export, live backups and recovery.
+- 🐳 **A complete local setup:** non-root containers, Nginx and HTTPS on
+  OrbStack.
+- 🧪 **Checks that exercise failures:** replay, database write failures,
+  SIGKILL, full storage, concurrent requests, image scanning and SBOM reports.
 
-- No pide frases semilla ni claves privadas.
-- No necesita transacciones ni pagos para iniciar sesión.
-- No consulta tu saldo para decidir quién eres.
-- Una firma no concede acceso para siempre: las sesiones caducan y se revocan.
+Gozne never asks for a seed phrase or private key. Sign-in requires no
+transaction, fees or balance lookup. EVM support currently covers externally
+owned accounts (EOAs); smart wallets, WalletConnect, OIDC and passkeys are
+future work.
 
-Para EVM implementamos SIWE con cuentas externas (EOA). Para Solana usamos
-Sign-In With Solana: la demo necesita una wallet compatible con `signIn`, como
-Phantom. WalletConnect, smart wallets y OIDC quedan para más adelante.
+## Try it on a Mac 🚀
 
-## Qué hay hoy
-
-- 🔑 Firmas EVM y Solana con desafíos de un solo uso ligados al navegador.
-- 🍪 Sesiones opacas de una hora, logout con CSRF y revocación por CLI.
-- 🚦 Identidades, wallets y roles explícitos por aplicación. Sin permiso, no
-  pasas.
-- 🗃️ SQLite persistente, migraciones, auditoría y copias verificadas por CLI.
-- 🐳 Contenedores sin root, Nginx y pruebas del flujo completo por HTTPS.
-- 🧪 Pruebas de caída, almacenamiento lleno y peticiones concurrentes.
-
-## 🚀 Demo en Mac con OrbStack
-
-Con OrbStack arrancado:
+Start OrbStack, then run:
 
 ```sh
 git clone https://github.com/enriquegrx/gozne.git
@@ -86,31 +85,54 @@ docker compose -f examples/compose/orbstack.yaml up --build -d --wait
 docker compose -f examples/compose/orbstack.yaml exec gateway gozne policy apply /app/policy.json
 ```
 
-Abre **https://gozne.orb.local**. OrbStack pone el dominio y el HTTPS local. La
-política inicial no tiene wallets autorizadas. Añade tu dirección pública
-(sustituye `TU_DIRECCION_PUBLICA`; nunca una clave privada):
+Open [the local demo](https://gozne.orb.local). OrbStack supplies the local
+domain and HTTPS. The starter policy has **no authorized wallets**. Its
+`example-user` identity has `reader` and `admin` roles for the demo. Attach your
+**public address**:
 
 ```sh
-docker compose -f examples/compose/orbstack.yaml exec gateway gozne wallet attach example-user evm TU_DIRECCION_PUBLICA
+docker compose -f examples/compose/orbstack.yaml exec gateway gozne wallet attach example-user evm YOUR_PUBLIC_ADDRESS
 ```
 
-Para Solana, cambia `evm` por `solana`. Conecta la wallet, firma y entra en la
-aplicación de prueba. Verás la identidad y los roles que recibe del proxy.
+Use `solana` instead of `evm` for a Solana address. Open the HTTPS URL in the
+browser where your wallet extension is installed, select it and sign in. For
+EVM, the example policy allows Ethereum mainnet, chain ID `1`.
 
-Los datos sobreviven a los reinicios. **No vuelvas a aplicar la política vacía**
-si ya has añadido wallets: una importación sustituye toda la política.
+The [control panel walkthrough](docs/11-CONTROL-PANEL.md) takes you through the
+owner/collaborator demo, permission rules, API calls and exact execution limits.
+Existing installations must explicitly grant `admin` to their operator; see the
+[upgrade instructions](docs/11-CONTROL-PANEL.md#upgrading-an-existing-installation).
+
+**Do not reapply the empty starter policy after adding wallets.** Policy imports
+replace the whole policy and invalidate existing access state. The named volume
+keeps your state across restarts. Stop the demo with:
 
 ```sh
 docker compose -f examples/compose/orbstack.yaml down
 ```
 
-¿Usas otro entorno? La [guía de operación](docs/08-OPERACION.md) incluye una
-demo HTTPS portable, gestión de permisos y revocación. El Compose de la raíz
-arranca solo la API en `127.0.0.1:3001`; el login necesita un proxy HTTPS.
+For portable HTTPS and proxy integration, see
+[operations](docs/08-OPERATIONS.md). The root Compose file runs only the API on
+`127.0.0.1:3001`; browser authentication needs an HTTPS reverse proxy.
 
-### Para desarrollar
+## How the pieces fit
 
-Necesitas **Node.js 24.20.0**. Si utilizas nvm:
+```mermaid
+flowchart LR
+    W[Browser + wallet] -->|Signed message| G[Gozne]
+    G --> S[(SQLite)]
+    W --> N[Nginx]
+    N -->|Check live session| G
+    N -->|Verified identity + roles| A[Your application]
+```
+
+Authentication protects application access. Signed actions are a separate API
+workflow; placing a proxy in front of an app does not automatically protect its
+individual operations with approval signatures.
+
+## Development
+
+Use **Node.js 24.20.0**. With nvm:
 
 ```sh
 nvm install
@@ -120,49 +142,40 @@ npm run check
 npm start
 ```
 
-`npm run check` ejecuta formato, lint, compilación y pruebas. `npm start` usa la
-compilación resultante y crea la base local en `state/gozne.sqlite`.
-
-En otra terminal puedes ejecutar:
+`check` runs formatting, lint, compilation and tests. `start` uses the compiled
+code and initializes `state/gozne.sqlite`. In another terminal:
 
 ```sh
 npm run cli -- config check --json
 npm run cli -- doctor --json
 ```
 
-`config check` valida las opciones sin crear archivos. `doctor` revisa una base
-ya inicializada; si todavía no has arrancado el servicio, devuelve un error.
+Configuration validation is read-only. `doctor` expects an initialized database.
 
-## Configuración
+| Variable          | Local default          | Purpose                             |
+| ----------------- | ---------------------- | ----------------------------------- |
+| `GOZNE_HOST`      | `127.0.0.1`            | Listen address                      |
+| `GOZNE_PORT`      | `3001`                 | HTTP port                           |
+| `GOZNE_DATABASE`  | `./state/gozne.sqlite` | SQLite file                         |
+| `GOZNE_LOG_LEVEL` | `info`                 | `silent`, `info`, `warn` or `error` |
 
-| Variable          | Valor local por defecto | Uso                                |
-| ----------------- | ----------------------- | ---------------------------------- |
-| `GOZNE_HOST`      | `127.0.0.1`             | Dirección de escucha               |
-| `GOZNE_PORT`      | `3001`                  | Puerto HTTP                        |
-| `GOZNE_DATABASE`  | `./state/gozne.sqlite`  | Archivo SQLite                     |
-| `GOZNE_LOG_LEVEL` | `info`                  | `silent`, `info`, `warn` o `error` |
+The container listens on `0.0.0.0` and stores state in `/app/state`. No session
+signing secret is needed. Node reads environment variables; it does not load
+`.env` files automatically. Authentication returns `503` until a policy is
+imported. Keep `/v1/auth/validate` internal to the proxy.
 
-El contenedor escucha en `0.0.0.0` y guarda el estado en `/app/state`. No hay
-una clave de firma de sesiones que configurar. Las variables se leen del
-entorno; los archivos `.env` no se cargan automáticamente al ejecutar Node.
+## Read more 📚
 
-Sin política importada, las rutas de autenticación responden `503`.
-`GET /v1/auth/validate?application=demo` permite al proxy comprobar una sesión;
-esta ruta debe quedar fuera de la exposición pública.
+- [Vision and scope](docs/01-VISION-AND-SCOPE.md) ·
+  [Architecture](docs/02-ARCHITECTURE.md)
+- [API guide](docs/03-API-AND-CONTRACTS.md) · [OpenAPI contract](openapi.yaml)
+- [Control panel and signed actions](docs/11-CONTROL-PANEL.md)
+- [Threat model](docs/04-SECURITY.md) · [Recovery](docs/09-RECOVERY.md)
+- [Verification and reports](docs/10-VERIFICATION.md) ·
+  [Roadmap](docs/06-ROADMAP.md)
+- [Architecture decisions](docs/07-DECISIONS.md) ·
+  [Project provenance](docs/05-CLEAN-ORIGIN.md)
+- [Contributing](CONTRIBUTING.md) · [Reporting a vulnerability](SECURITY.md)
 
-## 📚 Un poco más de detalle
-
-- [Visión y alcance](docs/01-VISION-Y-ALCANCE.md)
-- [Arquitectura](docs/02-ARQUITECTURA.md)
-- [Contrato HTTP actual](openapi.yaml) y
-  [Flujo de autenticación](docs/03-API-Y-CONTRATOS.md)
-- [Modelo de amenazas](docs/04-SEGURIDAD.md)
-- [Copias y recuperación](docs/09-RECUPERACION.md)
-- [Pruebas e informes de seguridad](docs/10-VERIFICACION.md)
-- [Roadmap](docs/06-ROADMAP.md)
-- [Decisiones técnicas](docs/07-DECISIONES.md)
-- [Cómo colaborar](CONTRIBUTING.md) · [Reportar una vulnerabilidad](SECURITY.md)
-
-Gozne está en una etapa temprana, sin auditoría externa ni versión estable. La
-licencia de distribución está pendiente de definición; todavía no se ha
-concedido una licencia de código abierto.
+The repository is public, but a distribution license has not been selected. No
+open-source license has been granted yet.

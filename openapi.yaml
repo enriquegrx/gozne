@@ -1,17 +1,17 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.3
+  version: 0.1.0-dev.4
   description:
-    Alpha EVM/SIWS. API y login requieren el mismo origen HTTPS. Sin política,
-    autenticación devuelve 503.
+    Alpha EVM/SIWS authentication and signed simulation controls. API and login
+    require the same HTTPS origin. Authentication returns 503 without a policy.
 paths:
   /healthz:
     get:
-      summary: Comprobar lectura de SQLite
+      summary: Check SQLite read availability
       responses:
         '200':
-          description: Correcto
+          description: Success
           content:
             application/json:
               schema:
@@ -24,18 +24,17 @@ paths:
                 required:
                   - status
         '503':
-          description:
-            Política ausente o almacenamiento no disponible; denegar acceso
+          description: Missing policy or unavailable storage; deny access
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
   /version:
     get:
-      summary: Versión y capacidades
+      summary: Version and capabilities
       responses:
         '200':
-          description: Correcto
+          description: Success
           content:
             application/json:
               schema:
@@ -60,10 +59,10 @@ paths:
                   - authentication
   /v1/auth/nonce:
     post:
-      summary: Emitir desafío de cinco minutos y cookie de contexto
+      summary: Issue a five-minute login challenge and browser context cookie
       responses:
         '200':
-          description: Correcto
+          description: Success
           content:
             application/json:
               schema:
@@ -80,52 +79,50 @@ paths:
                   signInInput:
                     type: object
                     description:
-                      Campos Sign-In With Solana; solo presente en Solana
+                      Sign-In With Solana fields; present only for Solana
                     additionalProperties: true
                 required:
                   - nonce
                   - message
                   - expiresAt
         '400':
-          description: Petición inválida
+          description: Invalid request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Firma o sesión inválida
+          description: Invalid proof or session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Origen o aplicación no permitidos; CSRF inválido
+          description: Origin or application denied, or invalid CSRF token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Límite de peticiones
+          description: Rate limit reached
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '503':
-          description:
-            Política ausente o almacenamiento no disponible; denegar acceso
+          description: Missing policy or unavailable storage; deny access
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '413':
-          description: Cuerpo demasiado grande
+          description: Request body too large
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description:
-            Política modificada durante la emisión; solicitar un desafío nuevo
+          description: Policy changed during issuance; request a new challenge
       requestBody:
         required: true
         content:
@@ -149,7 +146,7 @@ paths:
                 chainId:
                   type: string
                   maxLength: 32
-                  description: 'Ejemplos: 1, solana:mainnet, solana:devnet'
+                  description: 'Examples: 1, solana:mainnet, solana:devnet'
               required:
                 - application
                 - network
@@ -162,50 +159,50 @@ paths:
           schema:
             type: string
             format: uri
-          description: Origen HTTPS exacto de la aplicación
+          description: Exact application HTTPS origin
   /v1/auth/verify:
     post:
-      summary: Verificar el mensaje exacto y emitir cookie de sesión de una hora
+      summary:
+        Verify the exact message and issue a session lasting at most one hour
       responses:
         '200':
-          description: Correcto
+          description: Success
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Session'
         '400':
-          description: Petición inválida
+          description: Invalid request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Firma o sesión inválida
+          description: Invalid proof or session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Origen o aplicación no permitidos; CSRF inválido
+          description: Origin or application denied, or invalid CSRF token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Límite de peticiones
+          description: Rate limit reached
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '503':
-          description:
-            Política ausente o almacenamiento no disponible; denegar acceso
+          description: Missing policy or unavailable storage; deny access
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '413':
-          description: Cuerpo demasiado grande
+          description: Request body too large
           content:
             application/json:
               schema:
@@ -228,7 +225,8 @@ paths:
                   type: string
                   maxLength: 256
                   description:
-                    'EVM: 65 bytes hex con prefijo 0x. Solana: 64 bytes base64.'
+                    'EVM: 65 hexadecimal bytes prefixed with 0x. Solana: 64
+                    bytes in base64.'
               required:
                 - nonce
                 - message
@@ -242,50 +240,49 @@ paths:
           schema:
             type: string
             format: uri
-          description: Origen HTTPS exacto de la aplicación
+          description: Exact application HTTPS origin
   /v1/auth/me:
     get:
-      summary: Consultar sesión actual y token CSRF
+      summary: Read current session and CSRF token
       responses:
         '200':
-          description: Correcto
+          description: Success
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Session'
         '400':
-          description: Petición inválida
+          description: Invalid request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Firma o sesión inválida
+          description: Invalid proof or session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Origen o aplicación no permitidos; CSRF inválido
+          description: Origin or application denied, or invalid CSRF token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Límite de peticiones
+          description: Rate limit reached
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '503':
-          description:
-            Política ausente o almacenamiento no disponible; denegar acceso
+          description: Missing policy or unavailable storage; deny access
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '413':
-          description: Cuerpo demasiado grande
+          description: Request body too large
           content:
             application/json:
               schema:
@@ -294,60 +291,59 @@ paths:
         - SessionCookie: []
   /v1/auth/validate:
     get:
-      summary: Validación interna para el proxy; no exponer al navegador
+      summary: Internal proxy validation; do not expose to browsers
       responses:
         '200':
-          description: Correcto
+          description: Success
           headers:
             X-Gozne-Identity:
               schema:
                 type: string
-              description: Identidad interna
+              description: Internal identity
             X-Gozne-Role:
               schema:
                 type: string
-              description: Roles separados por comas
+              description: Comma-separated roles
             X-Gozne-Application:
               schema:
                 type: string
-              description: Aplicación autorizada
+              description: Authorized application
             X-Gozne-Session:
               schema:
                 type: string
-              description: ID público de auditoría, no token
+              description: Public audit ID, not a session token
         '400':
-          description: Petición inválida
+          description: Invalid request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Firma o sesión inválida
+          description: Invalid proof or session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Origen o aplicación no permitidos; CSRF inválido
+          description: Origin or application denied, or invalid CSRF token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Límite de peticiones
+          description: Rate limit reached
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '503':
-          description:
-            Política ausente o almacenamiento no disponible; denegar acceso
+          description: Missing policy or unavailable storage; deny access
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '413':
-          description: Cuerpo demasiado grande
+          description: Request body too large
           content:
             application/json:
               schema:
@@ -364,10 +360,10 @@ paths:
             pattern: ^[a-z][a-z0-9-]*$
   /v1/auth/logout:
     post:
-      summary: Revocar sesión y borrar cookies
+      summary: Revoke the session and clear cookies
       responses:
         '200':
-          description: Correcto
+          description: Success
           content:
             application/json:
               schema:
@@ -380,38 +376,37 @@ paths:
                 required:
                   - ok
         '400':
-          description: Petición inválida
+          description: Invalid request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Firma o sesión inválida
+          description: Invalid proof or session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Origen o aplicación no permitidos; CSRF inválido
+          description: Origin or application denied, or invalid CSRF token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Límite de peticiones
+          description: Rate limit reached
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '503':
-          description:
-            Política ausente o almacenamiento no disponible; denegar acceso
+          description: Missing policy or unavailable storage; deny access
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '413':
-          description: Cuerpo demasiado grande
+          description: Request body too large
           content:
             application/json:
               schema:
@@ -425,25 +420,695 @@ paths:
           schema:
             type: string
             format: uri
-          description: Origen HTTPS exacto de la aplicación
+          description: Exact application HTTPS origin
         - in: header
           name: X-CSRF-Token
           required: true
           schema:
             type: string
             pattern: ^[0-9a-f]{64}$
+  /v1/auth/control:
+    get:
+      summary: Read the current application control overview
+      description:
+        Up to 100 recent actions. Readers see actions from their current session
+        only. Administrators also receive up to 100 invitations and active
+        sessions. All authorized users receive up to 20 simulated deployment
+        receipts. Counters should not be treated as lifetime totals.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlOverview'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/auth/control/invitations:
+    post:
+      summary: Grant temporary reader access to an unconfigured wallet
+      description:
+        Requires admin and reader in the current application. Static wallet
+        entries cannot be invited. Only applications requiring no role other
+        than reader support invitations. Validity starts immediately; acceptance
+        is the first successful wallet login.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationCreated'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                network:
+                  type: string
+                  enum:
+                    - evm
+                    - solana
+                address:
+                  type: string
+                  minLength: 32
+                  maxLength: 64
+                minutes:
+                  type: integer
+                  minimum: 5
+                  maximum: 1440
+              required:
+                - network
+                - address
+                - minutes
+      parameters:
+        - &id001
+          in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Exact application HTTPS origin
+        - &id002
+          in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{64}$
+  /v1/auth/control/invitations/{id}/revoke:
+    post:
+      summary: Revoke a wallet invitation immediately
+      description:
+        Administrator only. Existing guest sessions stop authorizing on their
+        next check.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+      parameters:
+        - *id001
+        - *id002
+        - in: path
+          name: id
+          required: true
+          schema: &id003
+            type: string
+            format: uuid
+  /v1/auth/control/actions:
+    post:
+      summary: Request a simulated deployment
+      description:
+        Any authorized session. Payload is immutable. Expires after at most 30
+        minutes, bounded by the requesting session. Only the original session
+        can execute.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentPayload'
+      parameters:
+        - *id001
+        - *id002
+  /v1/auth/control/actions/{id}/challenge:
+    post:
+      summary: Issue a fresh administrator action proof
+      description:
+        Requires admin. Bound to action, payload hash, signing wallet and
+        session. Five-minute maximum, capped by request and administrator
+        session. Replaces the same session/action challenge.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionChallenge'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                chainId:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+              required:
+                - chainId
+      parameters:
+        - *id001
+        - *id002
+        - in: path
+          name: id
+          required: true
+          schema: *id003
+  /v1/auth/control/actions/{id}/approve:
+    post:
+      summary: Verify and consume an exact signed action proof
+      description:
+        Requires the issuing administrator session. Invalid matched proofs
+        consume their nonce. Approval expires at the original challenge
+        deadline; no new five-minute window is added.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                nonce:
+                  type: string
+                  pattern: ^[a-f0-9]{32}$
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+                signature:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+              required:
+                - nonce
+                - message
+                - signature
+      parameters:
+        - *id001
+        - *id002
+        - in: path
+          name: id
+          required: true
+          schema: *id003
+  /v1/auth/control/actions/{id}/execute:
+    post:
+      summary: Commit a simulated deployment exactly once per action
+      description:
+        Original requesting session only. Both requester and administrator
+        sessions must still authorize. Effect, consumption and audit share one
+        SQLite transaction. No external deployment runs. A repeat returns 409.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+      parameters:
+        - *id001
+        - *id002
+        - in: path
+          name: id
+          required: true
+          schema: *id003
+  /v1/auth/control/actions/{id}/cancel:
+    post:
+      summary: Cancel a pending or approved action
+      description:
+        Original requesting session or administrator in the same application.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+      parameters:
+        - *id001
+        - *id002
+        - in: path
+          name: id
+          required: true
+          schema: *id003
 components:
   securitySchemes:
     LoginContext:
       type: apiKey
       in: cookie
       name: __Host-gozne-login
-      description: Secure; HttpOnly; SameSite=Strict; Path=/; sin Domain
+      description: Secure; HttpOnly; SameSite=Strict; Path=/; no Domain
     SessionCookie:
       type: apiKey
       in: cookie
       name: __Host-gozne-session
-      description: Secure; HttpOnly; SameSite=Strict; Path=/; sin Domain
+      description: Secure; HttpOnly; SameSite=Strict; Path=/; no Domain
   schemas:
     Session:
       type: object
@@ -462,10 +1127,17 @@ components:
             type: string
         expiresAt:
           type: integer
-          description: Milisegundos Unix
+          description: Unix milliseconds
         csrfToken:
           type: string
           pattern: ^[0-9a-f]{64}$
+        network:
+          type: string
+          enum:
+            - evm
+            - solana
+        address:
+          type: string
       required:
         - id
         - identity
@@ -473,6 +1145,8 @@ components:
         - roles
         - expiresAt
         - csrfToken
+        - network
+        - address
     Error:
       type: object
       additionalProperties: false
@@ -494,3 +1168,269 @@ components:
             - request_id
       required:
         - error
+    DeploymentPayload:
+      type: object
+      additionalProperties: false
+      properties:
+        project:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._-]*$
+        version:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._-]*$
+        environment:
+          type: string
+          enum:
+            - preview
+            - staging
+            - production
+      required:
+        - project
+        - version
+        - environment
+    Action:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id003
+        application:
+          type: string
+        requester:
+          type: string
+        payload:
+          $ref: '#/components/schemas/DeploymentPayload'
+        payloadHash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        createdAt:
+          type: integer
+        expiresAt:
+          type: integer
+        status:
+          type: string
+          enum:
+            - pending
+            - approved
+            - executed
+            - canceled
+            - expired
+        approvedBy:
+          type:
+            - string
+            - 'null'
+        approvedAt:
+          type:
+            - integer
+            - 'null'
+        approvalExpiresAt:
+          type:
+            - integer
+            - 'null'
+        executedAt:
+          type:
+            - integer
+            - 'null'
+      required:
+        - id
+        - application
+        - requester
+        - payload
+        - payloadHash
+        - createdAt
+        - expiresAt
+        - status
+        - approvedBy
+        - approvedAt
+        - approvalExpiresAt
+        - executedAt
+    Invitation:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id003
+        network:
+          type: string
+          enum:
+            - evm
+            - solana
+        address:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: integer
+        expiresAt:
+          type: integer
+        revokedAt:
+          type:
+            - integer
+            - 'null'
+        acceptedAt:
+          type:
+            - integer
+            - 'null'
+      required:
+        - id
+        - network
+        - address
+        - createdBy
+        - createdAt
+        - expiresAt
+        - revokedAt
+        - acceptedAt
+    InvitationCreated:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id003
+        network:
+          type: string
+          enum:
+            - evm
+            - solana
+        address:
+          type: string
+        expiresAt:
+          type: integer
+        roles:
+          type: array
+          items:
+            const: reader
+          minItems: 1
+          maxItems: 1
+        url:
+          type: string
+          format: uri
+          description: Normal login URL; no secret bearer token
+      required:
+        - id
+        - network
+        - address
+        - expiresAt
+        - roles
+        - url
+    Deployment:
+      type: object
+      additionalProperties: false
+      properties:
+        actionId: *id003
+        project: &id004
+          type: string
+        version: &id005
+          type: string
+        environment: &id006
+          type: string
+          enum:
+            - preview
+            - staging
+            - production
+        executedAt: &id007
+          type: integer
+      required:
+        - actionId
+        - project
+        - version
+        - environment
+        - executedAt
+    ExecutionReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        actionId: *id003
+        project: *id004
+        version: *id005
+        environment: *id006
+        executedAt: *id007
+        simulated:
+          type: boolean
+          const: true
+      required:
+        - actionId
+        - project
+        - version
+        - environment
+        - executedAt
+        - simulated
+    Execution:
+      type: object
+      additionalProperties: false
+      properties:
+        action:
+          $ref: '#/components/schemas/Action'
+        receipt:
+          $ref: '#/components/schemas/ExecutionReceipt'
+      required:
+        - action
+        - receipt
+    SessionMetadata:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id003
+        identity:
+          type: string
+        createdAt:
+          type: integer
+        expiresAt:
+          type: integer
+      required:
+        - id
+        - identity
+        - createdAt
+        - expiresAt
+    ControlOverview:
+      type: object
+      additionalProperties: false
+      properties:
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Action'
+        invitations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invitation'
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionMetadata'
+        deployments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deployment'
+      required:
+        - actions
+        - invitations
+        - sessions
+        - deployments
+    ActionChallenge:
+      type: object
+      additionalProperties: false
+      properties:
+        nonce:
+          type: string
+          pattern: ^[a-f0-9]{32}$
+        message:
+          type: string
+        expiresAt:
+          type: integer
+        signInInput:
+          type: object
+          additionalProperties: true
+      required:
+        - nonce
+        - message
+        - expiresAt
+    Ok:
+      type: object
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          const: true
+      required:
+        - ok

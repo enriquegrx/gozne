@@ -2,11 +2,13 @@ import { chmodSync, existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { loadMigrations, migrate, verifyMigrations } from './migrations.js';
+import { ControlStore } from '../control/store.js';
 import { AuthStore } from '../auth/store.js';
 
 export interface Storage {
   schemaVersion: number;
   auth: AuthStore;
+  control: ControlStore;
   check(): void;
   close(): void;
 }
@@ -33,9 +35,11 @@ export function openStorage(path: string): Storage {
     const checkQuery = db.prepare(
       "SELECT value FROM service_metadata WHERE key = 'service'",
     );
+    const auth = new AuthStore(db);
     return {
       schemaVersion,
-      auth: new AuthStore(db),
+      auth,
+      control: new ControlStore(db, auth),
       check() {
         if (checkQuery.get()?.value !== 'gozne')
           throw new Error('Storage is unavailable');

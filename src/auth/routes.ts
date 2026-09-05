@@ -22,7 +22,7 @@ const cookieOptions = {
   path: '/',
 } as const;
 
-function originAllowed(request: FastifyRequest, expected: string): void {
+export function originAllowed(request: FastifyRequest, expected: string): void {
   if (
     request.headers.origin !== expected ||
     (request.headers['sec-fetch-site'] &&
@@ -32,7 +32,7 @@ function originAllowed(request: FastifyRequest, expected: string): void {
   }
 }
 
-function sameSiteRead(request: FastifyRequest, expected: string): void {
+export function sameSiteRead(request: FastifyRequest, expected: string): void {
   if (
     (request.headers.origin && request.headers.origin !== expected) ||
     (request.headers['sec-fetch-site'] &&
@@ -228,6 +228,8 @@ export async function authRoutes(
     return {
       id: session.id,
       identity: session.identity,
+      network: session.network,
+      address: session.address,
       application: session.application,
       roles: session.roles,
       expiresAt: session.expiresAt,

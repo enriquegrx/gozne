@@ -6,6 +6,7 @@ const sessionPanel = document.querySelector('#session');
 const walletSelect = document.querySelector('#evm-wallet');
 const providers = new Map();
 let csrfToken = null;
+let operationPending = false;
 
 const walletOptions = new Map([
   ['io.rabby', document.querySelector('#wallet-rabby')],
@@ -42,7 +43,7 @@ function discoverWallets() {
 document.querySelector('#refresh-wallets').addEventListener('click', () => {
   discoverWallets();
   status.textContent =
-    'Buscando wallets. Si falta la tuya, comprueba que está habilitada para este sitio y recarga la página.';
+    'Looking for wallets. If yours is missing, enable it for this site and reload.';
 });
 discoverWallets();
 
@@ -59,29 +60,38 @@ async function api(path, body, headers = {}) {
   const result = await response.json();
   if (!response.ok)
     throw new Error(
-      result.error?.message ?? 'No se pudo completar la petición.',
+      result.error?.message ?? 'The request could not be completed.',
     );
   return result;
 }
 function showSession(session) {
   csrfToken = session.csrfToken;
+  window.gozneSession = session;
+  window.dispatchEvent(new window.Event('gozne:session'));
   sessionPanel.hidden = false;
-  status.textContent = `Has entrado como ${session.identity}. La sesión caduca a las ${new Date(session.expiresAt).toLocaleTimeString()}.`;
+  status.textContent = `Signed in as ${session.identity}. Session expires at ${new Date(session.expiresAt).toLocaleTimeString()}.`;
 }
 async function busy(operation) {
+  if (operationPending) return;
+  operationPending = true;
+  const previous = new Map();
   const buttons = document.querySelectorAll('button');
   buttons.forEach((button) => {
+    previous.set(button, button.disabled);
     button.disabled = true;
   });
-  status.textContent = 'Revisa la solicitud en tu wallet…';
+  status.textContent =
+    'Working… Review your wallet if a signature is requested.';
   try {
     await operation();
   } catch (error) {
-    status.textContent = error.message || 'No se pudo iniciar sesión.';
+    status.textContent = error.message || 'Sign-in failed.';
   } finally {
     buttons.forEach((button) => {
-      button.disabled = false;
+      button.disabled = previous.get(button);
     });
+    document.querySelector('#refresh-panel').disabled = !window.gozneSession;
+    operationPending = false;
   }
 }
 
@@ -90,7 +100,7 @@ document.querySelector('#evm').addEventListener('click', () =>
     const provider = providers.get(walletSelect.value);
     if (!provider?.request)
       throw new Error(
-        'Selecciona una wallet detectada. No se abrirá otra wallet en su lugar.',
+        'Select a detected wallet. Another wallet will never be opened in its place.',
       );
     const [address] = await provider.request({ method: 'eth_requestAccounts' });
     const chainId = BigInt(
@@ -126,7 +136,7 @@ document.querySelector('#solana').addEventListener('click', () =>
     const provider = window.phantom?.solana;
     if (!provider?.signIn)
       throw new Error(
-        'Esta demo necesita una wallet Phantom con Sign-In With Solana.',
+        'This demo needs Phantom with Sign-In With Solana support.',
       );
     const connected = await provider.connect();
     const address = connected.publicKey.toString();
@@ -152,8 +162,10 @@ document.querySelector('#logout').addEventListener('click', () =>
   busy(async () => {
     await api('logout', {}, { 'X-CSRF-Token': csrfToken });
     csrfToken = null;
+    window.gozneSession = null;
+    window.dispatchEvent(new window.Event('gozne:session'));
     sessionPanel.hidden = true;
-    status.textContent = 'Sesión cerrada.';
+    status.textContent = 'Signed out.';
   }),
 );
 api('me')
@@ -161,3 +173,5 @@ api('me')
   .catch(() => {
     /* No active session on first visit. */
   });
+
+window.gozne = { api, busy, providers, walletSelect };

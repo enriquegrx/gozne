@@ -18,7 +18,7 @@ export interface Nonce extends ChallengeFields {
   message: string;
   consumedAt: number | null;
 }
-interface Session {
+export interface Session {
   id: string;
   identity: string;
   application: string;
@@ -93,7 +93,14 @@ export class AuthStore {
       this.db
         .prepare('UPDATE sessions SET revoked_at = ? WHERE revoked_at IS NULL')
         .run(now);
-      this.db.exec('DELETE FROM nonces');
+      this.db.exec(
+        "DELETE FROM nonces; DELETE FROM action_challenges; UPDATE actions SET status = 'canceled' WHERE status IN ('pending', 'approved');",
+      );
+      this.db
+        .prepare(
+          'UPDATE invitations SET revoked_at = ? WHERE revoked_at IS NULL',
+        )
+        .run(now);
       this.audit('policy.applied', now);
       return { changed: true };
     });
@@ -194,11 +201,11 @@ export class AuthStore {
       if (consumed.changes !== 1) return null;
       const access =
         verified && current?.digest === challenge.policyDigest
-          ? authorization(
-              current.policy,
+          ? this.access(
               challenge.application,
               challenge.network,
               challenge.address,
+              now,
             )
           : null;
       if (!access) {
@@ -216,7 +223,7 @@ export class AuthStore {
         throw new AuthError(503, 'SESSION_LIMIT', 'Service unavailable');
       const sessionToken = token();
       const sessionId = randomUUID();
-      const expiresAt = now + 3600_000;
+      const expiresAt = Math.min(now + 3600_000, access.expiresAt);
       if (oldToken && validToken(oldToken))
         this.db
           .prepare(
@@ -238,16 +245,93 @@ export class AuthStore {
           now,
           expiresAt,
         );
+      if (access.identity.startsWith('guest-'))
+        this.db
+          .prepare(
+            'UPDATE invitations SET accepted_at = COALESCE(accepted_at, ?) WHERE id = ?',
+          )
+          .run(now, access.identity.slice(6));
       this.audit('login.succeeded', now, access.identity, sessionId);
       return {
         sessionToken,
         id: sessionId,
-        ...access,
+        identity: access.identity,
+        network: challenge.network,
+        address: challenge.address,
+        roles: access.roles,
         application: challenge.application,
         expiresAt,
         csrfToken: csrfFor(sessionToken),
       };
     });
+  }
+
+  access(
+    application: string,
+    network: Network,
+    address: string,
+    now: number,
+    expectedIdentity?: string,
+  ) {
+    const policy = this.policy()?.policy;
+    if (!policy) return null;
+    const access = authorization(policy, application, network, address);
+    if (access) return { ...access, expiresAt: Number.MAX_SAFE_INTEGER };
+    // A configured identity (including a disabled wallet) always takes precedence.
+    if (
+      policy.identities.some((identity) =>
+        identity.wallets.some(
+          (wallet) => wallet.network === network && wallet.address === address,
+        ),
+      )
+    )
+      return null;
+    const app = policy.applications.find((app) => app.id === application);
+    if (!app || !app.requiredRoles.every((role) => role === 'reader'))
+      return null;
+    const invite = this.db
+      .prepare(
+        'SELECT id, expires_at FROM invitations WHERE application = ? AND network = ? AND address = ? AND revoked_at IS NULL AND created_at <= ? AND expires_at > ?',
+      )
+      .get(application, network, address, now, now);
+    if (!invite) return null;
+    const identity = `guest-${String(invite.id)}`;
+    if (expectedIdentity && expectedIdentity !== identity) return null;
+    return {
+      identity,
+      roles: ['reader'],
+      expiresAt: Number(invite.expires_at),
+    };
+  }
+
+  sessionByHash(hash: string, now: number) {
+    const row = this.db
+      .prepare(`SELECT ${sessionColumns} FROM sessions WHERE token_hash = ?`)
+      .get(hash) as unknown as Session | undefined;
+    if (
+      !row ||
+      row.revokedAt !== null ||
+      row.expiresAt <= now ||
+      row.createdAt > now
+    )
+      return null;
+    const access = this.access(
+      row.application,
+      row.network,
+      row.address,
+      now,
+      row.identity,
+    );
+    const app = this.policy()?.policy.applications.find(
+      (app) => app.id === row.application,
+    );
+    if (
+      !access ||
+      access.identity !== row.identity ||
+      app?.origin !== row.origin
+    )
+      return null;
+    return { ...row, roles: access.roles };
   }
 
   session(sessionToken: string, now: number) {
@@ -267,7 +351,13 @@ export class AuthStore {
       (app) => app.id === row.application,
     );
     const access = policy
-      ? authorization(policy.policy, row.application, row.network, row.address)
+      ? this.access(
+          row.application,
+          row.network,
+          row.address,
+          now,
+          row.identity,
+        )
       : null;
     if (
       !access ||

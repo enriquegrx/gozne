@@ -7,7 +7,7 @@ import { buildApp } from '../src/api/app.js';
 import { loadConfig } from '../src/config.js';
 import { openStorage } from '../src/storage/database.js';
 
-test('health, version and auth placeholder expose only the phase 1 contract', async (t) => {
+test('health, version and unconfigured authentication expose the expected contract', async (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'gozne-api-'));
   const config = loadConfig({
     GOZNE_DATABASE: join(directory, 'gozne.sqlite'),

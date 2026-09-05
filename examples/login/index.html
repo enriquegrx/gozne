@@ -1,63 +1,272 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gozne · Firma. Gira. Entra.</title>
+    <meta name="color-scheme" content="light" />
+    <title>Gozne · Access, with intent.</title>
     <link rel="stylesheet" href="/style.css" />
     <script src="/login.js" defer></script>
+    <script src="/panel.js" defer></script>
   </head>
   <body>
-    <main>
-      <p class="eyebrow">GOZNE / DEMO LOCAL</p>
-      <h1>Firma.<br />Gira.<br /><span>Entra.</span></h1>
-      <p class="intro">
-        Una firma para abrir la puerta. Tus claves se quedan en tu wallet.
-      </p>
-      <section aria-label="Iniciar sesión">
-        <label for="evm-wallet">Wallet EVM</label>
-        <select id="evm-wallet" aria-describedby="evm-help">
-          <option value="">Elige tu wallet</option>
-          <option id="wallet-rabby" value="io.rabby" disabled>
-            Rabby · no detectada
-          </option>
-          <option id="wallet-metamask" value="io.metamask" disabled>
-            MetaMask · no detectada
-          </option>
-        </select>
-        <p id="evm-help" class="note">
-          Elige qué wallet quieres abrir. Las opciones se activan al detectarlas
-          en este navegador; otras wallets compatibles aparecen automáticamente.
-        </p>
-        <button id="refresh-wallets" class="secondary" type="button">
-          Buscar wallets
-        </button>
-        <button id="evm" type="button">Entrar con mi wallet EVM</button>
-        <label for="solana-chain">Red Solana</label>
-        <select id="solana-chain">
-          <option value="solana:mainnet">Mainnet</option>
-          <option value="solana:devnet">Devnet</option>
-        </select>
-        <button id="solana" class="secondary" type="button">
-          Entrar con Solana
-        </button>
-        <p class="note">
-          Firmar este mensaje no mueve fondos ni solicita una transacción. La
-          wallet debe estar autorizada por quien administra esta demo.
-        </p>
-      </section>
-      <p id="status" role="status" aria-live="polite">
-        Conecta una wallet para empezar.
-      </p>
-      <div id="session" hidden>
-        <a href="/private/">Abrir la aplicación →</a>
-        <button id="logout" class="secondary" type="button">
-          Cerrar sesión
-        </button>
+    <a class="skip" href="#main">Skip to content</a>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Gozne home"
+        ><span class="brand-mark">g</span>gozne<span class="alpha"
+          >ALPHA</span
+        ></a
+      >
+      <p class="nav-label">WORKSPACE</p>
+      <nav aria-label="Workspace">
+        <a href="#main" class="nav-active"
+          ><span aria-hidden="true">▦</span> Overview</a
+        ><a href="#actions"><span aria-hidden="true">↗</span> Signed actions</a
+        ><a href="#invitations"><span aria-hidden="true">◇</span> Invitations</a
+        ><a href="#activity"><span aria-hidden="true">◷</span> Deployments</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <span class="dot"></span> Self-hosted, by you.
+        <p>Your keys stay in your wallet.</p>
+        <a href="https://github.com/enriquegrx/gozne">Documentation ↗</a>
       </div>
-      <footer>
-        Versión alpha · Ejemplo de integración, sin auditoría externa.
-      </footer>
-    </main>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <span class="muted">Workspace</span><span class="divider">/</span
+          ><strong>Local demo</strong>
+        </div>
+        <span class="pill">Simulation environment</span>
+      </header>
+      <main id="main">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">ACCESS, WITH INTENT.</p>
+            <h1>Open the right doors.</h1>
+            <p class="muted">
+              Invite a wallet. Approve an exact action. Stay in control.
+            </p>
+          </div>
+          <button id="refresh-panel" class="secondary" type="button" disabled>
+            ↻ Refresh
+          </button>
+        </div>
+        <div class="metrics" aria-label="Workspace summary">
+          <article>
+            <p>Active invitations</p>
+            <strong id="metric-invitations">—</strong
+            ><span>Time-limited reader access</span>
+          </article>
+          <article>
+            <p>Awaiting approval</p>
+            <strong id="metric-pending">—</strong
+            ><span>A fresh signature is required</span>
+          </article>
+          <article>
+            <p>Executed actions</p>
+            <strong id="metric-executed">—</strong
+            ><span>Recorded once, in this demo</span>
+          </article>
+        </div>
+        <div class="content-grid">
+          <div class="primary-column">
+            <section class="card welcome" id="welcome">
+              <span class="eyebrow">A SMALL SIGNATURE. A CLEAR DECISION.</span>
+              <h2>Access is just<br />the beginning.</h2>
+              <p>
+                Give a collaborator 30 minutes to enter. Review their deployment
+                request, then sign exactly what you approve.
+              </p>
+              <div class="steps">
+                <span><b>01</b> Invite</span><span><b>02</b> Approve</span
+                ><span><b>03</b> Execute once</span>
+              </div>
+            </section>
+            <section class="card" id="actions">
+              <div class="section-heading">
+                <div>
+                  <h2>Signed actions</h2>
+                  <p class="muted">
+                    Every approval has a purpose and an expiry.
+                  </p>
+                </div>
+                <span class="tag">DEMO</span>
+              </div>
+              <form id="action-form">
+                <fieldset disabled id="action-fields">
+                  <div class="form-row">
+                    <label
+                      >Project<input
+                        name="project"
+                        value="website"
+                        required
+                        maxlength="64"
+                        pattern="[A-Za-z0-9][A-Za-z0-9._-]*" /></label
+                    ><label
+                      >Version<input
+                        name="version"
+                        placeholder="v1.2.3"
+                        required
+                        maxlength="64"
+                        pattern="[A-Za-z0-9][A-Za-z0-9._-]*" /></label
+                    ><label
+                      >Environment<select name="environment">
+                        <option value="staging">Staging</option>
+                        <option value="preview">Preview</option>
+                        <option value="production">Production</option>
+                      </select></label
+                    >
+                  </div>
+                  <button type="submit">＋ Request simulated deployment</button>
+                </fieldset>
+              </form>
+              <div id="action-list" class="record-list">
+                <p class="empty">
+                  Sign in to see requests and create your first action.
+                </p>
+              </div>
+            </section>
+            <section class="card" id="invitations">
+              <div class="section-heading">
+                <div>
+                  <h2>Temporary invitations</h2>
+                  <p class="muted">
+                    One wallet. Reader access. A clear deadline.
+                  </p>
+                </div>
+                <span class="tag">ADMIN</span>
+              </div>
+              <form id="invite-form">
+                <fieldset disabled id="invite-fields">
+                  <div class="form-row invite-row">
+                    <label
+                      >Network<select name="network">
+                        <option value="evm">EVM</option>
+                        <option value="solana">Solana</option>
+                      </select></label
+                    ><label
+                      >Public wallet address<input
+                        name="address"
+                        placeholder="0x… or Solana address"
+                        required
+                        minlength="32"
+                        maxlength="64"
+                        autocomplete="off" /></label
+                    ><label
+                      >Duration<select name="minutes">
+                        <option value="30">30 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="240">4 hours</option>
+                        <option value="1440">24 hours</option>
+                      </select></label
+                    >
+                  </div>
+                  <button type="submit" class="secondary">
+                    Create invitation
+                  </button>
+                </fieldset>
+              </form>
+              <p id="invite-result" role="status" class="note"></p>
+              <div id="invitation-list" class="record-list">
+                <p class="empty">
+                  Administrator sign-in required to manage invitations.
+                </p>
+              </div>
+            </section>
+            <section class="card" id="activity">
+              <div class="section-heading">
+                <div>
+                  <h2>Deployment receipts</h2>
+                  <p class="muted">
+                    Simulated effects committed with their approvals.
+                  </p>
+                </div>
+              </div>
+              <div id="deployment-list">
+                <p class="empty">No receipts loaded.</p>
+              </div>
+            </section>
+          </div>
+          <aside
+            class="secondary-column"
+            aria-label="Session and signing wallet"
+          >
+            <section class="card wallet-card">
+              <div class="section-heading">
+                <h2>Your wallet</h2>
+                <span id="connection-state" class="tag">DISCONNECTED</span>
+              </div>
+              <p class="muted">Choose the extension you want to use.</p>
+              <label for="evm-wallet">EVM wallet</label
+              ><select id="evm-wallet" aria-describedby="evm-help">
+                <option value="">Choose a wallet</option>
+                <option id="wallet-rabby" value="io.rabby" disabled>
+                  Rabby · not detected
+                </option>
+                <option id="wallet-metamask" value="io.metamask" disabled>
+                  MetaMask · not detected
+                </option>
+              </select>
+              <p id="evm-help" class="note">
+                Compatible browser wallets appear automatically. Your selection
+                is always respected.
+              </p>
+              <button id="evm" type="button">Sign in with EVM ↗</button
+              ><button id="refresh-wallets" class="text-button" type="button">
+                Discover wallets
+              </button>
+              <div class="or"><span>or use Solana</span></div>
+              <label for="solana-chain">Solana network</label
+              ><select id="solana-chain">
+                <option value="solana:mainnet">Mainnet</option>
+                <option value="solana:devnet">Devnet</option></select
+              ><button id="solana" class="secondary" type="button">
+                Sign in with Phantom
+              </button>
+              <p id="status" role="status" aria-live="polite">
+                Connect an authorized wallet to begin.
+              </p>
+              <div id="session" hidden>
+                <a class="app-link" href="/private/"
+                  >Open protected application ↗</a
+                ><button id="logout" class="secondary" type="button">
+                  Sign out
+                </button>
+              </div>
+            </section>
+            <section class="card quiet">
+              <p class="eyebrow">WHAT YOU ARE SIGNING</p>
+              <h3>Messages, not transactions.</h3>
+              <p>
+                A login proves wallet ownership. An action signature approves
+                the named project, version and environment.
+              </p>
+              <p>
+                This demo records simulated deployments. It never runs a
+                deployment or moves funds.
+              </p>
+            </section>
+            <section class="card quiet">
+              <h3>First time here?</h3>
+              <p>
+                The operator must attach their public wallet address to an
+                administrator identity. Invited collaborators only need their
+                own wallet.
+              </p>
+              <a
+                href="https://github.com/enriquegrx/gozne/blob/main/docs/11-CONTROL-PANEL.md"
+                >Read the setup guide ↗</a
+              >
+            </section>
+          </aside>
+        </div>
+        <footer>
+          Gozne · Sign. Turn. Enter.<span
+            >Alpha software · No external security audit</span
+          >
+        </footer>
+      </main>
+    </div>
   </body>
 </html>

@@ -52,7 +52,7 @@ const policy = {
         { network: 'evm', address: eth.address },
         { network: 'solana', address: solAddress },
       ],
-      grants: { demo: ['reader'] },
+      grants: { demo: ['reader', 'admin'] },
     },
   ],
 };
@@ -157,8 +157,90 @@ try {
     assert.equal(inside.status, 200, inside.text);
     const result = JSON.parse(inside.text);
     assert.equal(result.headers['x-gozne-identity'], 'tester');
-    assert.equal(result.headers['x-gozne-role'], 'reader');
+    assert.equal(result.headers['x-gozne-role'], 'reader,admin');
     assert.equal(result.headers['x-gozne-injected'], undefined);
+    if (network === 'evm') {
+      const control = (
+        path,
+        body = {},
+        clientCookie = cookie,
+        csrf = session.csrfToken,
+      ) =>
+        http(`/v1/auth/control/${path}`, {
+          cookie: clientCookie,
+          body,
+          headers: { 'x-csrf-token': csrf },
+        });
+      const guest = Wallet.createRandom();
+      const invited = await control('invitations', {
+        network: 'evm',
+        address: guest.address,
+        minutes: 30,
+      });
+      assert.equal(invited.status, 200, invited.text);
+      const guestNonce = await http('/v1/auth/nonce', {
+        body: {
+          application: 'demo',
+          network: 'evm',
+          address: guest.address,
+          chainId: '1',
+        },
+      });
+      assert.equal(guestNonce.status, 200, guestNonce.text);
+      const issuedGuest = JSON.parse(guestNonce.text);
+      const guestVerified = await http('/v1/auth/verify', {
+        cookie: cookieFrom(guestNonce, '__Host-gozne-login'),
+        body: {
+          nonce: issuedGuest.nonce,
+          message: issuedGuest.message,
+          signature: await guest.signMessage(issuedGuest.message),
+        },
+      });
+      assert.equal(guestVerified.status, 200, guestVerified.text);
+      const guestCookie = cookieFrom(guestVerified, '__Host-gozne-session');
+      const guestSession = JSON.parse(guestVerified.text);
+      assert.equal(
+        (await http('/private/', { cookie: guestCookie })).status,
+        200,
+      );
+      const requested = await control(
+        'actions',
+        { project: 'website', version: 'v1.2.3', environment: 'staging' },
+        guestCookie,
+        guestSession.csrfToken,
+      );
+      assert.equal(requested.status, 200, requested.text);
+      const action = JSON.parse(requested.text);
+      const challenge = await control(`actions/${action.id}/challenge`, {
+        chainId: '1',
+      });
+      assert.equal(challenge.status, 200, challenge.text);
+      const proof = JSON.parse(challenge.text);
+      const approval = await control(`actions/${action.id}/approve`, {
+        nonce: proof.nonce,
+        message: proof.message,
+        signature: await eth.signMessage(proof.message),
+      });
+      assert.equal(approval.status, 200, approval.text);
+      const execute = () =>
+        control(
+          `actions/${action.id}/execute`,
+          {},
+          guestCookie,
+          guestSession.csrfToken,
+        );
+      assert.equal((await execute()).status, 200);
+      assert.equal((await execute()).status, 409);
+      assert.equal(
+        (await control(`invitations/${JSON.parse(invited.text).id}/revoke`))
+          .status,
+        200,
+      );
+      assert.equal(
+        (await http('/private/', { cookie: guestCookie })).status,
+        302,
+      );
+    }
     if (network === 'evm')
       compose(
         'exec',
@@ -226,7 +308,7 @@ try {
     'proxy must fail closed when Gozne is unavailable',
   );
   console.log(
-    'HTTPS/Nginx verified: EVM + SIWS login, header sanitation, CLI revocation, logout, backup/restore and failure closure.',
+    'HTTPS/Nginx verified: EVM + SIWS login, header sanitation, CLI revocation, logout, wallet-bound invitation, signed action, one-time execution, backup/restore and failure closure.',
   );
 } catch (error) {
   // These are isolated synthetic services; request bodies and signatures are not logged.

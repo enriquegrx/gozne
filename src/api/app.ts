@@ -4,6 +4,7 @@ import type { Config } from '../config.js';
 import { version } from '../metadata.js';
 import type { Storage } from '../storage/database.js';
 import { AuthError } from '../auth/errors.js';
+import { controlRoutes } from '../control/routes.js';
 import { authRoutes } from '../auth/routes.js';
 
 export function buildApp(config: Config, storage: Storage, now = Date.now) {
@@ -104,6 +105,9 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
   }));
   void app.register(async (scope) => {
     await authRoutes(scope, storage.auth, now);
+    await scope.register(async (control) =>
+      controlRoutes(control, storage.auth, storage.control, now),
+    );
   });
   app.addHook('onClose', async () => {
     storage.close();

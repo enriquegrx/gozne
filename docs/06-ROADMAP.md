@@ -1,92 +1,59 @@
-# Roadmap y criterios de entrega
+# Roadmap and delivery criteria
 
-## Fase 0 — Definición
+## Completed foundation
 
-- [x] Elegir nombre, propósito y lema.
-- [x] Definir alcance inicial y límites.
-- [x] Documentar arquitectura, API y amenazas.
-- [ ] Validar disponibilidad jurídica y técnica del nombre Gozne.
-- [ ] Elegir licencia tras revisar titularidad y dependencias.
-- [ ] Aprobar las decisiones abiertas.
+- [x] Independent repository, product scope and architecture documentation.
+- [x] Node.js 24, strict TypeScript, formatting, lint and tests.
+- [x] Fastify API, SQLite migrations, non-root Docker and Compose.
+- [x] SIWE for EVM EOAs and standardized Sign-In With Solana.
+- [x] Browser-bound nonces, opaque sessions and application roles.
+- [x] Local administrative CLI and Nginx forward-auth.
+- [x] Transaction failure tests, live backup and safe restore.
+- [x] HTTPS integration, image scanning, CycloneDX inventories and secret scans.
+- [x] SIGKILL/WAL, real ENOSPC and short concurrency tests.
 
-**Estado:** arranque y publicación del esqueleto autorizados. Nombre y licencia
-siguen pendientes para la release estable.
+## First control-panel MVP
 
-## Fase 1 — Esqueleto público en desarrollo
+- [x] Responsive local-asset panel with explicit wallet selection.
+- [x] Wallet-bound reader invitations with expiry and revocation.
+- [x] Exact signed action payload, expiry and one-time simulation execution.
+- [x] Administrator/collaborator walkthrough and HTTPS integration test.
+- [x] Schema migration and restoration rules for invitations and approvals.
+- [x] English README, API documentation and operator guides.
 
-- [x] Inicializar repositorio nuevo con historial independiente.
-- [x] Configurar Node.js 24, TypeScript, lint, formato y tests.
-- [x] Crear API mínima, SQLite y migraciones.
-- [x] Añadir Dockerfile, Compose y healthcheck.
-- [x] Crear CI con pruebas, auditoría y escaneo de secretos.
+This MVP records simulated deployment receipts. It does not execute a real
+deployment, require multiple approvers or provide cross-domain SSO.
 
-**Salida:** servicio mínimo construible, probado y ejecutable sin root. La
-autenticación se incorporó en la fase siguiente.
+## Before a stable release
 
-## Fase 2 — Autenticación 0.1
+- [ ] Validate the Gozne name and choose a distribution license.
+- [ ] Complete attribution review and independent security review.
+- [ ] Test real wallet extensions and supported browser versions.
+- [ ] Run prolonged load tests and broader storage/power-loss scenarios.
+- [ ] Demonstrate an independent application integration and full recovery
+      drill.
+- [ ] Establish binary reproducibility, signed artifacts and release checksums.
+- [ ] Review retention, pagination and operational scale before larger
+      deployments.
 
-- [x] SIWE/EIP-4361 para EOA.
-- [x] Flujo Solana estandarizado y compatibilidad documentada.
-- [x] Nonces atómicos y sesiones opacas.
-- [x] Identidades, wallets, roles y política por aplicación.
-- [x] CLI básica y forward-auth.
+## Later product work
 
-**Salida:** login EVM/Solana y protección de una aplicación sintética.
+Prioritize from actual integrations rather than adding every authentication
+feature:
 
-## Fase 3 — Seguridad y documentación
+1. A real action adapter with delivery, idempotency and recovery guarantees.
+2. Multi-person approval rules for sensitive operations.
+3. Scoped and expiring delegation, including agent use cases.
+4. Wallet linking and replacement; WalletConnect and mobile support.
+5. Smart-wallet verification and optional passkey step-up.
+6. OIDC Authorization Code + PKCE for existing applications.
+7. PostgreSQL or high availability when a deployment requires it.
 
-- [x] Fallos transaccionales de login, logout y política; bloqueo de SQLite.
-- [x] Copia en caliente y recuperación sin reactivar sesiones antiguas.
-- [x] OpenAPI, quickstart, guía de proxy y recuperación.
-- [x] Inventario CycloneDX y escaneo de imagen en CI.
-- [x] SIGKILL con escrituras en WAL y conservación de revocaciones confirmadas.
-- [x] Error real ENOSPC en almacenamiento acotado y recuperación sin reinicio.
-- [x] Concurrencia y límites por IP, con informe de latencias en CI.
-- [ ] Completar matriz adversarial, carga prolongada y pérdida de energía.
-- [ ] Reproducibilidad binaria y firma de artefactos de release.
-- [ ] Cerrar licencia y revisión de atribuciones; SECURITY y CONTRIBUTING ya
-      existen.
+## Definition of a stable delivery
 
-**Estado:** endurecimiento en curso; aún no es un candidato estable.
-
-**Salida:** candidato `0.1.0-rc.1`.
-
-## Fase 4 — Piloto independiente
-
-- Integrar Gozne en una aplicación independiente de los ejemplos del proyecto.
-- Instalar desde cero siguiendo solo la documentación.
-- Probar actualización, backup, restauración y rollback.
-- Revisar compatibilidad de wallets y navegadores.
-
-**Salida:** evidencia de portabilidad real.
-
-## Fase 5 — Publicación 0.1.0
-
-- Validar nombre y licencia.
-- Segunda revisión de seguridad.
-- Confirmar cero secretos y referencias internas.
-- Publicar tag, checksums, imagen firmada y SBOM.
-
-## Evolución posterior
-
-Orden recomendado, condicionado por demanda real:
-
-1. WalletConnect y experiencia móvil.
-2. Vinculación y sustitución segura de varias wallets (`Gozne Link`).
-3. ERC-1271/ERC-6492 para smart wallets.
-4. RBAC avanzado, webhooks y observabilidad.
-5. Proveedor OpenID Connect con Authorization Code + PKCE.
-6. Firma múltiple para operaciones críticas (`Gozne Quorum`).
-7. Firma fresca o WebAuthn para elevación (`Gozne Step-Up`).
-8. PostgreSQL y alta disponibilidad si existe necesidad demostrada.
-
-## Definición de terminado para 0.1.0
-
-- Tests funcionales y de seguridad correctos en CI y en la imagen final.
-- Cero vulnerabilidades altas o críticas.
-- Instalación reproducible y documentada en menos de diez minutos.
-- Backup y restauración de SQLite demostrados.
-- Imagen no root y filesystem de solo lectura.
-- OpenAPI y ejemplos coinciden con el comportamiento real.
-- Sin secretos, datos reales ni referencias a sistemas privados.
-- Limitaciones visibles y canal de seguridad disponible.
+Functional and security tests pass in CI and the runtime image. No HIGH or
+CRITICAL gateway-image findings remain at publication time. Setup, upgrade,
+backup and recovery are demonstrated. Documentation matches behavior,
+limitations are explicit, and examples contain no real user data. A public
+security channel, license and independently reviewed release process are in
+place.

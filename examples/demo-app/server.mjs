@@ -9,7 +9,7 @@ createServer((request, response) => {
     JSON.stringify(
       {
         message:
-          'Dentro de la demo. Esta aplicación no verifica firmas ni lee cookies.',
+          'Inside the demo. This application does not verify signatures or read cookies.',
         headers: Object.fromEntries(
           Object.entries(request.headers).filter(([key]) =>
             key.startsWith('x-gozne-'),

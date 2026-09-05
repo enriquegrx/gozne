@@ -127,6 +127,6 @@ test('an unavailable selection never falls back to the default wallet', async ()
   assert.equal(f.requests.includes('/v1/auth/nonce'), false);
   assert.match(
     f.querySelector('#status').textContent,
-    /Selecciona una wallet detectada/,
+    /Select a detected wallet/,
   );
 });
