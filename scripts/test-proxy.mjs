@@ -530,7 +530,7 @@ try {
     'proxy must fail closed when Gozne is unavailable',
   );
   console.log(
-    'HTTPS/Nginx verified: separate public/admin origins, public route denial, loopback-only administration, EVM + SIWS login, header sanitation, CLI and panel revocation, logout, permanent user management, wallet-bound invitation, signed action, one-time execution, backup/restore and failure closure.',
+    'HTTPS/Nginx verified: separate public/admin origins, public route denial, loopback-only administration, EVM + SIWS login, header sanitation, application-scoped audit, CLI and panel revocation, logout, permanent user management, wallet-bound invitation, signed action, one-time execution, backup/restore and failure closure.',
   );
 } catch (error) {
   // These are isolated synthetic services; request bodies and signatures are not logged.

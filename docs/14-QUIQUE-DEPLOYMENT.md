@@ -53,8 +53,8 @@ actions, while compact labels and quiet borders keep operational data easy to
 scan.
 
 The public page stays focused on a single decision: choose a wallet and sign in.
-The internal workspace uses the same typography, color and card geometry, but
-adds a dark navigation rail, colored status cards and denser controls for
+The internal workspace uses the same typography, color and card geometry, with a
+warm cream navigation rail, colored status cards and denser controls for
 administration. A user can tell that both belong together without mistaking the
 public entrance for the private control surface.
 
