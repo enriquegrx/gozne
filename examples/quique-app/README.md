@@ -85,11 +85,12 @@ Required external configuration:
 - Cloudflare Tunnel: `app.quique.es` to the Docker host's port 3012.
 - Internal hosts/DNS: `gozne.quique.es` to the Docker host's internal address.
   Never put this hostname in the public tunnel.
-- Private TLS: set `QUIQUE_TLS_DIRECTORY` to a root-owned directory containing
-  `fullchain.pem` and `privkey.pem`, delivered from the `pki01` Certbot lineage.
-  Validate the files before recreating `admin-panel` and configure a scoped
-  renewal hook to refresh them. Issuance on the certificate host alone does not
-  update the serving container.
+- Private TLS: set `QUIQUE_TLS_DIRECTORY` to an access-restricted directory
+  containing `fullchain.pem` and `privkey.pem`, readable by the unprivileged
+  Nginx process and delivered from the `pki01` Certbot lineage. Validate the
+  files before recreating `admin-panel` and configure a scoped renewal hook to
+  refresh them. Issuance on the certificate host alone does not update the
+  serving container.
 - Automated delivery may use `scripts/install-gozne-certificate.py` as the
   forced command of a dedicated, restricted SSH key. It accepts only a bounded
   certificate payload, checks the hostname, expiry and matching private key,
