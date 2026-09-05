@@ -1,60 +1,496 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.1
-  description: Esqueleto técnico. La autenticación todavía no está implementada.
+  version: 0.1.0-dev.2
+  description:
+    Alpha EVM/SIWS. API y login requieren el mismo origen HTTPS. Sin política,
+    autenticación devuelve 503.
 paths:
   /healthz:
     get:
-      summary: Comprobar proceso y lectura del almacenamiento
+      summary: Comprobar lectura de SQLite
       responses:
         '200':
-          description: El proceso puede consultar su base de datos.
+          description: Correcto
           content:
             application/json:
               schema:
                 type: object
-                required: [status]
+                additionalProperties: false
                 properties:
-                  status: { type: string, const: ok }
+                  status:
+                    type: string
+                    const: ok
+                required:
+                  - status
         '503':
-          $ref: '#/components/responses/Unavailable'
+          description:
+            Política ausente o almacenamiento no disponible; denegar acceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /version:
     get:
-      summary: Consultar versión y estado del desarrollo
+      summary: Versión y capacidades
       responses:
         '200':
-          description: Información de esta versión.
+          description: Correcto
           content:
             application/json:
               schema:
                 type: object
-                required: [name, version, stage, authentication]
+                additionalProperties: false
                 properties:
-                  name: { type: string, const: gozne }
-                  version: { type: string }
-                  stage: { type: string, const: bootstrap }
-                  authentication: { type: boolean, const: false }
+                  name:
+                    type: string
+                    const: gozne
+                  version:
+                    type: string
+                  stage:
+                    type: string
+                    const: alpha
+                  authentication:
+                    type: boolean
+                    const: true
+                required:
+                  - name
+                  - version
+                  - stage
+                  - authentication
+  /v1/auth/nonce:
+    post:
+      summary: Emitir desafío de cinco minutos y cookie de contexto
+      responses:
+        '200':
+          description: Correcto
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  nonce:
+                    type: string
+                    pattern: ^[0-9a-f]{32}$
+                  message:
+                    type: string
+                  expiresAt:
+                    type: integer
+                  signInInput:
+                    type: object
+                    description:
+                      Campos Sign-In With Solana; solo presente en Solana
+                    additionalProperties: true
+                required:
+                  - nonce
+                  - message
+                  - expiresAt
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Firma o sesión inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origen o aplicación no permitidos; CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Límite de peticiones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description:
+            Política ausente o almacenamiento no disponible; denegar acceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Cuerpo demasiado grande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Política modificada durante la emisión; solicitar un desafío nuevo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                application:
+                  type: string
+                  maxLength: 64
+                  pattern: ^[a-z][a-z0-9-]*$
+                network:
+                  type: string
+                  enum:
+                    - evm
+                    - solana
+                address:
+                  type: string
+                  maxLength: 64
+                chainId:
+                  type: string
+                  maxLength: 32
+                  description: 'Ejemplos: 1, solana:mainnet, solana:devnet'
+              required:
+                - application
+                - network
+                - address
+                - chainId
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Origen HTTPS exacto de la aplicación
+  /v1/auth/verify:
+    post:
+      summary: Verificar el mensaje exacto y emitir cookie de sesión de una hora
+      responses:
+        '200':
+          description: Correcto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Firma o sesión inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origen o aplicación no permitidos; CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Límite de peticiones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description:
+            Política ausente o almacenamiento no disponible; denegar acceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Cuerpo demasiado grande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                nonce:
+                  type: string
+                  pattern: ^[0-9a-f]{32}$
+                message:
+                  type: string
+                  maxLength: 4096
+                signature:
+                  type: string
+                  maxLength: 256
+                  description:
+                    'EVM: 65 bytes hex con prefijo 0x. Solana: 64 bytes base64.'
+              required:
+                - nonce
+                - message
+                - signature
+      security:
+        - LoginContext: []
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Origen HTTPS exacto de la aplicación
+  /v1/auth/me:
+    get:
+      summary: Consultar sesión actual y token CSRF
+      responses:
+        '200':
+          description: Correcto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Firma o sesión inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origen o aplicación no permitidos; CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Límite de peticiones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description:
+            Política ausente o almacenamiento no disponible; denegar acceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Cuerpo demasiado grande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - SessionCookie: []
   /v1/auth/validate:
     get:
-      summary: Reservado para forward-auth; siempre deniega en esta fase
+      summary: Validación interna para el proxy; no exponer al navegador
       responses:
+        '200':
+          description: Correcto
+          headers:
+            X-Gozne-Identity:
+              schema:
+                type: string
+              description: Identidad interna
+            X-Gozne-Role:
+              schema:
+                type: string
+              description: Roles separados por comas
+            X-Gozne-Application:
+              schema:
+                type: string
+              description: Aplicación autorizada
+            X-Gozne-Session:
+              schema:
+                type: string
+              description: ID público de auditoría, no token
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Firma o sesión inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origen o aplicación no permitidos; CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Límite de peticiones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '503':
-          $ref: '#/components/responses/Unavailable'
-components:
-  responses:
-    Unavailable:
-      description: Servicio no disponible; el proxy debe denegar el acceso.
-      content:
-        application/json:
+          description:
+            Política ausente o almacenamiento no disponible; denegar acceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Cuerpo demasiado grande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - SessionCookie: []
+      parameters:
+        - in: query
+          name: application
+          required: true
           schema:
-            type: object
-            required: [error]
-            properties:
-              error:
+            type: string
+            maxLength: 64
+            pattern: ^[a-z][a-z0-9-]*$
+  /v1/auth/logout:
+    post:
+      summary: Revocar sesión y borrar cookies
+      responses:
+        '200':
+          description: Correcto
+          content:
+            application/json:
+              schema:
                 type: object
-                required: [code, message, request_id]
+                additionalProperties: false
                 properties:
-                  code: { type: string }
-                  message: { type: string }
-                  request_id: { type: string, format: uuid }
+                  ok:
+                    type: boolean
+                    const: true
+                required:
+                  - ok
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Firma o sesión inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origen o aplicación no permitidos; CSRF inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Límite de peticiones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description:
+            Política ausente o almacenamiento no disponible; denegar acceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Cuerpo demasiado grande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - SessionCookie: []
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Origen HTTPS exacto de la aplicación
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+components:
+  securitySchemes:
+    LoginContext:
+      type: apiKey
+      in: cookie
+      name: __Host-gozne-login
+      description: Secure; HttpOnly; SameSite=Strict; Path=/; sin Domain
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-gozne-session
+      description: Secure; HttpOnly; SameSite=Strict; Path=/; sin Domain
+  schemas:
+    Session:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        identity:
+          type: string
+        application:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: integer
+          description: Milisegundos Unix
+        csrfToken:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+        - id
+        - identity
+        - application
+        - roles
+        - expiresAt
+        - csrfToken
+    Error:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
+              format: uuid
+          required:
+            - code
+            - message
+            - request_id
+      required:
+        - error

@@ -29,10 +29,10 @@ test('health, version and auth placeholder expose only the phase 1 contract', as
   assert.equal(
     (await app.inject('/version')).json<{ authentication: boolean }>()
       .authentication,
-    false,
+    true,
   );
   const denied = await app.inject({
-    url: '/v1/auth/validate',
+    url: '/v1/auth/validate?application=docs',
     headers: {
       cookie: '__Host-gozne-session=synthetic',
       'x-gozne-role': 'admin',
@@ -42,7 +42,7 @@ test('health, version and auth placeholder expose only the phase 1 contract', as
   assert.equal(denied.statusCode, 503);
   assert.equal(denied.headers['set-cookie'], undefined);
   assert.equal(denied.headers['x-gozne-role'], undefined);
-  assert.equal((await app.inject('/v1/auth/me')).statusCode, 404);
+  assert.equal((await app.inject('/v1/auth/me')).statusCode, 503);
   assert.equal(
     (await app.inject({ method: 'POST', url: '/healthz' })).statusCode,
     404,
@@ -50,12 +50,14 @@ test('health, version and auth placeholder expose only the phase 1 contract', as
 });
 
 test('storage failure is closed and errors do not echo internal details', async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'gozne-failure-'));
+  const storage = openStorage(join(directory, 'gozne.sqlite'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
   const app = buildApp(loadConfig({ GOZNE_LOG_LEVEL: 'silent' }), {
-    schemaVersion: 1,
+    ...storage,
     check() {
       throw new Error('/private/example.sqlite synthetic-sensitive-value');
     },
-    close() {},
   });
   app.get('/test-error', async () => {
     throw new Error('synthetic-sensitive-value');

@@ -54,7 +54,10 @@ try {
     '-e',
     "try { require('node:fs').writeFileSync('/app/write-probe', 'x'); process.exit(1); } catch (e) { if (!['EROFS', 'EACCES'].includes(e.code)) throw e; }",
   );
-  assert.equal((await fetch(`${base}/v1/auth/validate`)).status, 503);
+  assert.equal(
+    (await fetch(`${base}/v1/auth/validate?application=docs`)).status,
+    503,
+  );
   const before = JSON.parse(docker('exec', name, 'gozne', 'doctor', '--json'));
   assert.equal(before.status, 'ok');
   const migrationTime = () =>

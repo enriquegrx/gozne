@@ -1,7 +1,7 @@
 # Seguridad
 
-Gozne está en desarrollo. La versión actual es un esqueleto técnico: **no
-autentica usuarios ni debe usarse para proteger una aplicación real**.
+Gozne está en desarrollo. La versión actual es una alpha con autenticación
+EVM/Solana. Está destinada a pruebas y todavía no tiene soporte de producción.
 
 ## Comunicar un problema
 

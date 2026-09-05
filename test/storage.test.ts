@@ -24,7 +24,7 @@ test('schema survives restart and database is owner-only', (t) => {
   const second = openStorage(path);
   second.check();
   second.close();
-  assert.equal(inspectStorage(path).schemaVersion, 1);
+  assert.equal(inspectStorage(path).schemaVersion, 2);
 });
 
 test('failed migration rolls back its DDL and migration record', () => {
@@ -36,8 +36,8 @@ test('failed migration rolls back its DDL and migration record', () => {
       migrate(db, [
         ...initial,
         {
-          version: 2,
-          name: '002-broken.sql',
+          version: 3,
+          name: '003-broken.sql',
           sql: 'CREATE TABLE partial (id INTEGER); INSERT INTO missing VALUES (1);',
         },
       ]),
@@ -49,7 +49,7 @@ test('failed migration rolls back its DDL and migration record', () => {
     assert.equal(
       db.prepare('SELECT COUNT(*) AS total FROM schema_migrations').get()
         ?.total,
-      1,
+      2,
     );
     assert.equal(db.isTransaction, false);
   } finally {
@@ -72,8 +72,8 @@ test('changed and newer migration histories are rejected', () => {
       ),
     );
     db.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?, ?)').run(
-      2,
-      '002-future.sql',
+      3,
+      '003-future.sql',
       'synthetic-checksum',
       'test',
     );

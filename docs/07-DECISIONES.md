@@ -22,8 +22,8 @@ núcleo independiente hasta que exista un segundo consumidor real.
 
 ## D-004 — Administración mediante CLI
 
-**Aceptada como alcance.** La fase 1 incluye validación y diagnóstico. Las
-operaciones sobre identidades, wallets y sesiones llegarán con la autenticación.
+**Implementada.** Configuración, diagnóstico, política, identidades, wallets,
+sesiones y auditoría se administran localmente por CLI.
 
 ## D-005 — Node.js 24 y TypeScript
 
@@ -44,25 +44,23 @@ concurrencia. Antes de una release estable se revisará el estado de soporte del
 módulo integrado y el comportamiento bajo carga. El adaptador permite sustituir
 el driver.
 
-En esta fase solo existen metadatos del servicio y de migraciones. No se
-anticipan tablas de usuarios o wallets sin cerrar antes los contratos de
-autenticación. `/healthz` comprueba lectura de SQLite; no certifica
-disponibilidad de escrituras ni que la autenticación esté implementada.
+El esquema 2 añade política efectiva, nonces, sesiones y auditoría. `/healthz`
+comprueba lectura, no disponibilidad de escrituras.
 
 Referencia:
 [documentación de SQLite en Node](https://nodejs.org/api/sqlite.html).
 
 ## D-007 — Sesiones opacas
 
-**Seleccionada como dirección para fase 2.** Cookie aleatoria y estado de
-servidor. Todavía no se emiten cookies ni se crean sesiones.
+**Implementada.** Cookies aleatorias de 256 bits; SQLite almacena su hash.
+Sesiones de una hora, con revocación y comprobación de política viva.
 
 ## D-008 — Política e identidades
 
-**Pendiente para fase 2.** Definir la fuente de verdad para identidades y
-wallets y la relación entre configuración declarativa, SQLite y la CLI. Una
-recarga inválida deberá preservar la última política válida. El esqueleto solo
-valida las variables operativas documentadas en el README.
+**Implementada.** SQLite es la fuente de verdad. Importación JSON completa,
+atómica y validada; las ediciones CLI usan control de concurrencia optimista. Un
+cambio efectivo revoca todas las sesiones y desafíos. Una importación idéntica
+no modifica nada. No hay recarga automática desde archivos.
 
 ## D-009 — Fastify
 
@@ -82,11 +80,18 @@ y [soporte LTS](https://fastify.dev/docs/latest/Reference/LTS/).
 
 ## D-010 — SIWE y Solana
 
-**Pendiente para fase 2.** Elegir librerías y evaluar conformidad SIWE/SIWS.
-También se debe definir la vinculación del desafío al contexto de login y cuándo
-se consume un nonce ante errores, para cubrir tanto replay como invalidación
-maliciosa del desafío de otro usuario. No se ha trasladado un codec ni un
-verificador propio de otro proyecto.
+**Implementada.** `siwe` y recuperación EOA con `ethers`; Wallet Standard para
+el formato SIWS y `@noble/curves` para Ed25519 estricto. No se admiten smart
+wallets ni firmas de mensajes libres. El mensaje debe coincidir exactamente con
+el emitido, incluyendo origen, cadena, nonce, tiempos y recurso de aplicación.
+
+El desafío está ligado a una cookie aleatoria de contexto. Una firma inválida
+consume el nonce solo cuando coincide ese contexto; otro navegador no puede
+quemarlo. Verificación final, consumo y creación de sesión se confirman en una
+transacción. Un fallo de persistencia no emite una cookie de sesión.
+
+Referencias: [SIWE](https://docs.login.xyz/),
+[Sign-In With Solana](https://github.com/phantom/sign-in-with-solana).
 
 ## D-011 — Licencia
 

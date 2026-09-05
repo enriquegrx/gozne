@@ -28,3 +28,6 @@ los tests. Nunca añadas datos de producción.
 
 La licencia de distribución está pendiente de definición. Antes de enviar una
 contribución sustancial, consulta al mantenedor para aclarar sus condiciones.
+
+La [guía de operación](docs/08-OPERACION.md) documenta las pruebas HTTPS con
+wallets sintéticas y la demo en OrbStack.

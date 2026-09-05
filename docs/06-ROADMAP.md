@@ -21,15 +21,15 @@ siguen pendientes para la release estable.
 - [x] Crear CI con pruebas, auditoría y escaneo de secretos.
 
 **Salida:** servicio mínimo construible, probado y ejecutable sin root. La
-autenticación permanece deshabilitada.
+autenticación se incorporó en la fase siguiente.
 
 ## Fase 2 — Autenticación 0.1
 
-- SIWE/EIP-4361 completo.
-- Flujo Solana estandarizado y compatibilidad documentada.
-- Nonces atómicos y sesiones opacas.
-- Identidades, wallets, roles y política por aplicación.
-- CLI básica y forward-auth.
+- [x] SIWE/EIP-4361 para EOA.
+- [x] Flujo Solana estandarizado y compatibilidad documentada.
+- [x] Nonces atómicos y sesiones opacas.
+- [x] Identidades, wallets, roles y política por aplicación.
+- [x] CLI básica y forward-auth.
 
 **Salida:** login EVM/Solana y protección de una aplicación sintética.
 

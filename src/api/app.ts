@@ -3,8 +3,10 @@ import Fastify, { LogController } from 'fastify';
 import type { Config } from '../config.js';
 import { version } from '../metadata.js';
 import type { Storage } from '../storage/database.js';
+import { AuthError } from '../auth/errors.js';
+import { authRoutes } from '../auth/routes.js';
 
-export function buildApp(config: Config, storage: Storage) {
+export function buildApp(config: Config, storage: Storage, now = Date.now) {
   const app = Fastify({
     logger: config.logLevel === 'silent' ? false : { level: config.logLevel },
     logController: new LogController({ disableRequestLogging: true }),
@@ -12,6 +14,7 @@ export function buildApp(config: Config, storage: Storage) {
     requestIdHeader: false,
     genReqId: () => randomUUID(),
     bodyLimit: 16 * 1024,
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
     requestTimeout: 10_000,
     connectionTimeout: 10_000,
     exposeHeadRoutes: false,
@@ -34,6 +37,14 @@ export function buildApp(config: Config, storage: Storage) {
     );
   });
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof AuthError)
+      return reply.code(error.statusCode).send({
+        error: {
+          code: error.code,
+          message: error.message,
+          request_id: request.id,
+        },
+      });
     const statusCode =
       error !== null &&
       typeof error === 'object' &&
@@ -42,13 +53,17 @@ export function buildApp(config: Config, storage: Storage) {
       error.statusCode >= 400 &&
       error.statusCode < 500
         ? error.statusCode
-        : 500;
+        : request.routeOptions.url?.startsWith('/v1/auth/')
+          ? 503
+          : 500;
     const code =
       statusCode === 413
         ? 'PAYLOAD_TOO_LARGE'
         : statusCode < 500
           ? 'INVALID_REQUEST'
-          : 'INTERNAL_ERROR';
+          : statusCode === 503
+            ? 'STORAGE_UNAVAILABLE'
+            : 'INTERNAL_ERROR';
     request.log.error({ code }, 'request failed');
     return reply.code(statusCode).send({
       error: {
@@ -84,18 +99,12 @@ export function buildApp(config: Config, storage: Storage) {
   app.get('/version', async () => ({
     name: 'gozne',
     version,
-    stage: 'bootstrap',
-    authentication: false,
+    stage: 'alpha',
+    authentication: true,
   }));
-  app.get('/v1/auth/validate', async (request, reply) =>
-    reply.code(503).send({
-      error: {
-        code: 'AUTH_NOT_READY',
-        message: 'Authentication is not implemented yet',
-        request_id: request.id,
-      },
-    }),
-  );
+  void app.register(async (scope) => {
+    await authRoutes(scope, storage.auth, now);
+  });
   app.addHook('onClose', async () => {
     storage.close();
   });

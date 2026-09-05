@@ -1,8 +1,8 @@
-# Arquitectura propuesta
+# Arquitectura de la alpha
 
 ## Enfoque inicial
 
-Gozne comenzará como una sola aplicación modular. Separar prematuramente el
+Gozne funciona como una sola aplicación modular. Separar prematuramente el
 núcleo, el servidor y la CLI en paquetes distintos complicaría releases y
 pruebas sin aportar valor a la versión inicial.
 
@@ -13,7 +13,7 @@ Base técnica seleccionada para fase 1:
 - SQLite con migraciones transaccionales.
 - Sesiones opacas de servidor; la cookie solo contiene un identificador
   aleatorio.
-- Política declarativa YAML o JSON validada mediante esquema.
+- Política declarativa JSON validada mediante esquema.
 - Contenedor OCI y Compose como despliegue de referencia.
 
 ## Componentes
@@ -28,7 +28,7 @@ flowchart LR
     P --> A[Aplicación protegida]
     C[CLI Gozne] --> S
     C --> F[Política declarativa]
-    G --> F
+    F -->|importación CLI| C
 ```
 
 ### Gateway HTTP
@@ -41,15 +41,15 @@ flowchart LR
 
 ### Verificadores
 
-- **EVM:** SIWE/EIP-4361 completo mediante una librería mantenida.
-- **Solana:** Sign-In With Solana cuando la wallet lo soporte; compatibilidad
-  por `signMessage` claramente identificada y ligada al dominio.
+- **EVM:** SIWE/EIP-4361 mediante `siwe`, para cuentas EOA.
+- **Solana:** Sign-In With Solana mediante Wallet Standard y Ed25519 estricto.
+  No se admite un flujo alternativo de mensajes libres.
 - Los adaptadores producen una identidad normalizada, pero preservan las reglas
   de cada red. Las direcciones Solana son sensibles a mayúsculas.
 
 ### Persistencia
 
-SQLite almacenará:
+SQLite almacena:
 
 - identidades y wallets vinculadas;
 - nonces emitidos y consumidos;
@@ -64,47 +64,18 @@ consumo del nonce o la sesión, la autenticación falla.
 
 Ejemplo exclusivamente sintético:
 
-```yaml
-applications:
-  docs:
-    origins:
-      - https://docs.example.test
-    required_roles:
-      - reader
+El formato exacto está en [la política de ejemplo](../examples/policy.json). Las
+aplicaciones declaran origen HTTPS, cadenas y roles requeridos. Las identidades
+vinculan wallets a permisos explícitos por aplicación.
 
-identities:
-  example-admin:
-    roles: [admin, reader]
-    wallets:
-      - network: evm
-        address: '0x0000000000000000000000000000000000000000'
-```
+SQLite es la fuente de verdad. La CLI importa el JSON completo de forma atómica;
+una importación inválida preserva la política anterior. Un cambio efectivo
+revoca todas las sesiones y desafíos, mientras una importación idéntica no hace
+nada. El servidor consulta la política efectiva sin reiniciarse.
 
-Una recarga inválida se rechaza por completo y conserva la última política
-válida.
-
-## Estructura futura del repositorio
-
-```text
-GOZNE/
-├── src/
-│   ├── api/
-│   ├── auth/
-│   ├── policy/
-│   ├── sessions/
-│   ├── storage/
-│   └── wallets/
-├── cli/
-├── public/example-login/
-├── examples/nginx/
-├── examples/compose/
-├── migrations/
-├── test/
-├── docs/
-├── openapi.yaml
-├── Dockerfile
-└── compose.yaml
-```
+El código de autenticación y sesiones vive en `src/auth`, la política en
+`src/policy` y los verificadores en `src/wallets`. El login de ejemplo está en
+`examples/login`, separado del gateway.
 
 ## Límites de confianza
 

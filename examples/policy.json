@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "applications": [
+    {
+      "id": "demo",
+      "origin": "https://localhost:8443",
+      "evmChainIds": [1],
+      "solanaChains": ["solana:mainnet", "solana:devnet"],
+      "requiredRoles": ["reader"]
+    }
+  ],
+  "identities": [
+    { "id": "example-user", "wallets": [], "grants": { "demo": ["reader"] } }
+  ]
+}

@@ -25,7 +25,7 @@ permite suplantar al usuario hasta que se deshabilite o sustituya.
 | Cabeceras proxy falsificadas   | Lista de proxies confiables y limpieza en el borde                   |
 | Escalada de rol                | Política viva y autorización server-side                             |
 | Persistencia fallida           | Fallo cerrado; nunca comunicar éxito sin escritura confirmada        |
-| Abuso de nonce/API             | Límites por origen e identidad con límites globales                  |
+| Abuso de nonce/API             | Límites por IP, contexto de navegador y almacenamiento global        |
 | Inyección/XSS en login         | CSP estricta, sin HTML inseguro y dependencias locales revisadas     |
 | Fuga en logs                   | Minimización, redacción y retención configurable                     |
 
@@ -33,7 +33,8 @@ permite suplantar al usuario hasta que se deshabilite o sustituya.
 
 - SIWE validado completamente, no solo un mensaje parecido a SIWE.
 - Nonces con entropía mínima de 128 bits, caducidad y límite de almacenamiento.
-- Consumo del nonce tanto ante éxito como ante intentos inválidos relevantes.
+- Consumo del nonce ante éxito o firma inválida con el contexto de navegador
+  correcto; un contexto ajeno no lo consume.
 - Sesiones opacas, revocables y persistentes.
 - Operaciones mutadoras solo mediante métodos apropiados; nunca logout por GET.
 - Comparación canónica de direcciones EVM y preservación exacta de Solana.

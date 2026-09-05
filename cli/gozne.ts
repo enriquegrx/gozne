@@ -2,13 +2,15 @@
 import { ConfigError, loadConfig } from '../src/config.js';
 import { version } from '../src/metadata.js';
 import { serve } from '../src/server.js';
-import { inspectStorage } from '../src/storage/database.js';
+import { inspectStorage, openStorage } from '../src/storage/database.js';
+import { readPolicyFile } from '../src/policy/policy.js';
+import { administration } from './admin.js';
 
 process.umask(0o077);
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const command = args.filter((arg) => arg !== '--json').join(' ');
-const output = (value: Record<string, unknown>, text: string) => {
+const output = (value: unknown, text: string) => {
   console.log(json ? JSON.stringify(value) : text);
 };
 
@@ -17,8 +19,25 @@ try {
     output({ version }, `Gozne ${version}`);
   } else if (command === '' || command === '--help' || command === 'help') {
     output(
-      { commands: ['serve', 'config check', 'doctor', 'version'] },
-      'Gozne — Firma. Gira. Entra.\n\n  gozne serve\n  gozne config check [--json]\n  gozne doctor [--json]\n  gozne version [--json]\n\nPhase 1: wallet authentication is not implemented yet.',
+      {
+        commands: [
+          'serve',
+          'config check',
+          'doctor',
+          'version',
+          'policy check <file>',
+          'policy apply <file>',
+          'policy export',
+          'identity list',
+          'identity add <id>',
+          'wallet attach <id> <evm|solana> <address>',
+          'wallet disable <evm|solana> <address>',
+          'session list',
+          'session revoke <id>',
+          'audit export',
+        ],
+      },
+      'Gozne — Firma. Gira. Entra.\n\n  serve | config check | doctor | version\n  policy check <file> | policy apply <file> | policy export\n  identity list | identity add <id>\n  wallet attach <id> <evm|solana> <address>\n  wallet disable <evm|solana> <address>\n  session list | session revoke <id> | audit export\n\nUse --json for machine-readable output. Alpha: review before production use.',
     );
   } else if (command === 'config check') {
     loadConfig();
@@ -27,10 +46,34 @@ try {
     const { schemaVersion } = inspectStorage(loadConfig().databasePath);
     output(
       { status: 'ok', schemaVersion },
-      `Storage is readable and consistent (schema ${schemaVersion}). Authentication is not implemented yet.`,
+      `Storage is readable and consistent (schema ${schemaVersion}).`,
     );
   } else if (command === 'serve' && !json) {
     await serve(loadConfig());
+  } else if (
+    args.filter((arg) => arg !== '--json')[0] === 'policy' &&
+    args.filter((arg) => arg !== '--json')[1] === 'check' &&
+    args.filter((arg) => arg !== '--json').length === 3
+  ) {
+    readPolicyFile(args.filter((arg) => arg !== '--json')[2]!);
+    output({ status: 'ok' }, 'Policy is valid.');
+  } else if (
+    ['policy', 'identity', 'wallet', 'session', 'audit'].includes(args[0] ?? '')
+  ) {
+    const config = loadConfig();
+    // Only applying a policy bootstraps a new database. Other commands require existing state.
+    if (args[0] !== 'policy' || args[1] !== 'apply')
+      inspectStorage(config.databasePath);
+    const storage = openStorage(config.databasePath);
+    try {
+      const result = administration(
+        storage.auth,
+        args.filter((arg) => arg !== '--json'),
+      );
+      output(result, JSON.stringify(result, null, 2));
+    } finally {
+      storage.close();
+    }
   } else {
     output(
       { error: { code: 'USAGE_ERROR', message: 'Unknown command or option' } },

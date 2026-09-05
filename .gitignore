@@ -13,3 +13,5 @@ coverage/
 *.pem
 *.key
 reports/
+examples/compose/tls/
+policy.local.json

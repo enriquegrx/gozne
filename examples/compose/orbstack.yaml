@@ -1,0 +1,45 @@
+name: gozne-demo
+services:
+  gateway:
+    build: ../..
+    image: gozne:dev
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
+    volumes:
+      - state:/app/state
+      - ../orbstack-policy.json:/app/policy.json:ro
+    mem_limit: 256m
+    pids_limit: 100
+  demo-app:
+    image: gozne:dev
+    command: [node, /demo/server.mjs]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - ../demo-app/server.mjs:/demo/server.mjs:ro
+    healthcheck:
+      disable: true
+  proxy:
+    image: nginxinc/nginx-unprivileged:stable-alpine@sha256:9b87ad3dd9f431c733f19dfb278c7eb3dba9dca381942c79818bb42f1a566a83
+    entrypoint: [nginx, -g, 'daemon off;']
+    labels:
+      dev.orbstack.domains: gozne.orb.local
+      dev.orbstack.http-port: '8080'
+    depends_on:
+      gateway:
+        condition: service_healthy
+      demo-app:
+        condition: service_started
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
+    volumes:
+      - ../nginx/orbstack.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/routes.conf:/etc/nginx/gozne-routes.conf:ro
+      - ../login:/usr/share/nginx/html:ro
+volumes:
+  state:

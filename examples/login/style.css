@@ -1,0 +1,92 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #203229;
+  background: #f4f2e9;
+}
+body {
+  margin: 0;
+  padding: 48px 24px;
+}
+main {
+  max-width: 480px;
+  margin: 0 auto;
+}
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+h1 {
+  font-size: clamp(56px, 13vw, 88px);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  margin: 32px 0;
+}
+h1 span {
+  color: #32705c;
+}
+.intro {
+  font-size: 19px;
+  line-height: 1.5;
+}
+section {
+  display: grid;
+  gap: 12px;
+  margin-top: 32px;
+}
+label {
+  font-size: 13px;
+  font-weight: 600;
+}
+select,
+button {
+  font: inherit;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+select {
+  background: #fff;
+  border: 1px solid #bac7be;
+  width: 100%;
+}
+button {
+  background: #254d3f;
+  color: #fff;
+  cursor: pointer;
+  border: 1px solid #254d3f;
+  font-weight: 600;
+}
+button.secondary {
+  background: transparent;
+  color: #254d3f;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.note,
+footer {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #53685c;
+}
+#status {
+  min-height: 3em;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+#session a {
+  display: block;
+  font-weight: 700;
+  color: #254d3f;
+  margin-bottom: 16px;
+}
+footer {
+  border-top: 1px solid #cad2c9;
+  padding-top: 20px;
+  margin-top: 36px;
+}
+:focus-visible {
+  outline: 3px solid #b45b23;
+  outline-offset: 3px;
+}

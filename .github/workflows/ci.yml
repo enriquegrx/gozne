@@ -30,3 +30,4 @@ jobs:
           docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m --cap-drop=ALL --security-opt=no-new-privileges:true gozne:test
           docker build -t gozne:dev .
           node scripts/smoke-container.mjs
+          node scripts/test-proxy.mjs

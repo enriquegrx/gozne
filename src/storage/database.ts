@@ -2,9 +2,11 @@ import { chmodSync, existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { loadMigrations, migrate, verifyMigrations } from './migrations.js';
+import { AuthStore } from '../auth/store.js';
 
 export interface Storage {
   schemaVersion: number;
+  auth: AuthStore;
   check(): void;
   close(): void;
 }
@@ -33,6 +35,7 @@ export function openStorage(path: string): Storage {
     );
     return {
       schemaVersion,
+      auth: new AuthStore(db),
       check() {
         if (checkQuery.get()?.value !== 'gozne')
           throw new Error('Storage is unavailable');

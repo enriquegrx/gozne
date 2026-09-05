@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "applications": [
+    {
+      "id": "demo",
+      "origin": "https://gozne.orb.local",
+      "evmChainIds": [1],
+      "solanaChains": ["solana:mainnet", "solana:devnet"],
+      "requiredRoles": ["reader"]
+    }
+  ],
+  "identities": [
+    {
+      "id": "example-user",
+      "wallets": [],
+      "grants": {
+        "demo": ["reader"]
+      }
+    }
+  ]
+}
