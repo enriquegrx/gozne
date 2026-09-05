@@ -15,7 +15,9 @@ Puede solicitar instalar su certificado local la primera vez. Para Solana, usa
 `solana` en el comando y una wallet con `signIn`. La demo soporta proveedores
 EVM EIP-6963 (Rabby, MetaMask y otros proveedores compatibles) y Phantom para
 Solana. Las extensiones deben estar instaladas en el navegador que abre la demo.
-La detección sigue la
+El selector exige elegir una wallet detectada: no utiliza `window.ethereum` ni
+abre una extensión alternativa si la elegida no está disponible. Usa la URL
+HTTPS de la demo, no el archivo HTML directamente. La detección sigue la
 [integración oficial de Rabby](https://rabby.io/docs/integrating-rabby-wallet).
 La compatibilidad del protocolo no sustituye una prueba con cada extensión. EVM
 usa Ethereum (chain ID 1); la política incluye Solana mainnet y devnet. La firma

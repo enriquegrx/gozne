@@ -7,6 +7,10 @@ const walletSelect = document.querySelector('#evm-wallet');
 const providers = new Map();
 let csrfToken = null;
 
+const walletOptions = new Map([
+  ['io.rabby', document.querySelector('#wallet-rabby')],
+  ['io.metamask', document.querySelector('#wallet-metamask')],
+]);
 window.addEventListener('eip6963:announceProvider', (event) => {
   const { info, provider } = event.detail ?? {};
   if (
@@ -15,18 +19,32 @@ window.addEventListener('eip6963:announceProvider', (event) => {
     typeof provider?.request !== 'function'
   )
     return;
-  if (providers.has(info.uuid)) {
-    providers.set(info.uuid, provider);
-    return;
+  const known = info.rdns === 'io.rabby' || info.rdns === 'io.metamask';
+  const key = known ? info.rdns : `uuid:${info.uuid}`;
+  providers.set(key, provider);
+  let option = walletOptions.get(key);
+  if (!option) {
+    option = document.createElement('option');
+    option.value = key;
+    walletOptions.set(key, option);
+    walletSelect.append(option);
   }
-  providers.set(info.uuid, provider);
-  const option = document.createElement('option');
-  option.value = info.uuid;
-  option.textContent = String(info.name).slice(0, 80);
-  if (providers.size === 1) walletSelect.replaceChildren();
-  walletSelect.append(option);
+  option.textContent = known
+    ? info.rdns === 'io.rabby'
+      ? 'Rabby'
+      : 'MetaMask'
+    : String(info.name).slice(0, 80);
+  option.disabled = false;
 });
-window.dispatchEvent(new window.Event('eip6963:requestProvider'));
+function discoverWallets() {
+  window.dispatchEvent(new window.Event('eip6963:requestProvider'));
+}
+document.querySelector('#refresh-wallets').addEventListener('click', () => {
+  discoverWallets();
+  status.textContent =
+    'Buscando wallets. Si falta la tuya, comprueba que está habilitada para este sitio y recarga la página.';
+});
+discoverWallets();
 
 async function api(path, body, headers = {}) {
   const response = await fetch(`/v1/auth/${path}`, {
@@ -69,12 +87,11 @@ async function busy(operation) {
 
 document.querySelector('#evm').addEventListener('click', () =>
   busy(async () => {
-    const provider =
-      walletSelect.value === 'injected'
-        ? window.ethereum
-        : providers.get(walletSelect.value);
+    const provider = providers.get(walletSelect.value);
     if (!provider?.request)
-      throw new Error('No encuentro una wallet EVM en este navegador.');
+      throw new Error(
+        'Selecciona una wallet detectada. No se abrirá otra wallet en su lugar.',
+      );
     const [address] = await provider.request({ method: 'eth_requestAccounts' });
     const chainId = BigInt(
       await provider.request({ method: 'eth_chainId' }),

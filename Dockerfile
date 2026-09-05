@@ -6,6 +6,7 @@ COPY tsconfig.json ./
 COPY src ./src
 COPY cli ./cli
 COPY test ./test
+COPY examples/login ./examples/login
 COPY migrations ./migrations
 RUN npm run build
 

@@ -17,12 +17,21 @@
       <section aria-label="Iniciar sesión">
         <label for="evm-wallet">Wallet EVM</label>
         <select id="evm-wallet" aria-describedby="evm-help">
-          <option value="injected">Wallet del navegador</option>
+          <option value="">Elige tu wallet</option>
+          <option id="wallet-rabby" value="io.rabby" disabled>
+            Rabby · no detectada
+          </option>
+          <option id="wallet-metamask" value="io.metamask" disabled>
+            MetaMask · no detectada
+          </option>
         </select>
         <p id="evm-help" class="note">
-          Rabby, MetaMask y otras wallets EVM instaladas en este navegador. Si
-          no aparece la tuya, abre esta página en el navegador donde la usas.
+          Elige qué wallet quieres abrir. Las opciones se activan al detectarlas
+          en este navegador; otras wallets compatibles aparecen automáticamente.
         </p>
+        <button id="refresh-wallets" class="secondary" type="button">
+          Buscar wallets
+        </button>
         <button id="evm" type="button">Entrar con mi wallet EVM</button>
         <label for="solana-chain">Red Solana</label>
         <select id="solana-chain">

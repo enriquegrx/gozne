@@ -8,3 +8,4 @@
 !test/**
 !migrations/**
 !scripts/healthcheck.mjs
+!examples/login/**
