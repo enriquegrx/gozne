@@ -67,12 +67,18 @@ export class ControlStore {
       );
     return session;
   }
-  private audit(event: string, identity: string, session: string, now: number) {
+  private audit(
+    event: string,
+    identity: string,
+    session: string,
+    application: string,
+    now: number,
+  ) {
     this.db
       .prepare(
-        'INSERT INTO audit(at,event,identity,session_id) VALUES (?,?,?,?)',
+        'INSERT INTO audit(at,event,identity,session_id,application) VALUES (?,?,?,?,?)',
       )
-      .run(now, event, identity, session);
+      .run(now, event, identity, session, application);
     this.db
       .prepare(
         'DELETE FROM audit WHERE at < ? OR sequence <= (SELECT MAX(sequence) - 50000 FROM audit)',
@@ -179,6 +185,49 @@ export class ControlStore {
         .all(actor.application),
     };
   }
+
+  auditTrail(
+    raw: string,
+    input: { before?: number; limit?: number; event?: string },
+    now: number,
+  ) {
+    const actor = this.actor(raw, now, true);
+    const limit = input.limit ?? 50;
+    const conditions = ['application = ?'];
+    const values: Array<string | number> = [actor.application];
+    if (input.before !== undefined) {
+      conditions.push('sequence < ?');
+      values.push(input.before);
+    }
+    if (input.event !== undefined) {
+      conditions.push('event = ?');
+      values.push(input.event);
+    }
+    values.push(limit + 1);
+    const rows = this.db
+      .prepare(
+        `SELECT sequence, at, event, identity, session_id AS sessionId
+         FROM audit
+         WHERE ${conditions.join(' AND ')}
+         ORDER BY sequence DESC
+         LIMIT ?`,
+      )
+      .all(...values) as Array<{
+      sequence: number;
+      at: number;
+      event: string;
+      identity: string | null;
+      sessionId: string | null;
+    }>;
+    const hasMore = rows.length > limit;
+    if (hasMore) rows.pop();
+    return {
+      application: actor.application,
+      events: rows,
+      nextBefore: hasMore ? rows.at(-1)?.sequence : null,
+    };
+  }
+
   applications(raw: string, now: number) {
     const actor = this.actor(raw, now);
     const current = this.auth.policy()!;
@@ -440,7 +489,13 @@ export class ControlStore {
       this.db
         .prepare('UPDATE sessions SET revoked_at = ? WHERE id = ?')
         .run(now, id);
-      this.audit('session.revoked-by-admin', actor.identity, actor.id, now);
+      this.audit(
+        'session.revoked-by-admin',
+        actor.identity,
+        actor.id,
+        actor.application,
+        now,
+      );
       return { ok: true };
     });
   }
@@ -532,7 +587,13 @@ export class ControlStore {
           now,
           expiresAt,
         );
-      this.audit('invitation.created', actor.identity, actor.id, now);
+      this.audit(
+        'invitation.created',
+        actor.identity,
+        actor.id,
+        actor.application,
+        now,
+      );
       return {
         id,
         network,
@@ -557,7 +618,13 @@ export class ControlStore {
           'INVITATION_NOT_FOUND',
           'Active invitation not found',
         );
-      this.audit('invitation.revoked', actor.identity, actor.id, now);
+      this.audit(
+        'invitation.revoked',
+        actor.identity,
+        actor.id,
+        actor.application,
+        now,
+      );
       return { ok: true };
     });
   }
@@ -600,7 +667,13 @@ export class ControlStore {
           now,
           Math.min(now + 1800_000, actor.expiresAt),
         );
-      this.audit('action.requested', actor.identity, actor.id, now);
+      this.audit(
+        'action.requested',
+        actor.identity,
+        actor.id,
+        actor.application,
+        now,
+      );
       return this.publicAction(this.action(id, actor.application), now);
     });
   }
@@ -706,7 +779,13 @@ export class ControlStore {
         .prepare('UPDATE action_challenges SET consumed_at = ? WHERE nonce = ?')
         .run(now, nonce);
       if (!verified) {
-        this.audit('action.proof-denied', actor.identity, actor.id, now);
+        this.audit(
+          'action.proof-denied',
+          actor.identity,
+          actor.id,
+          actor.application,
+          now,
+        );
         return null;
       }
       this.db
@@ -714,7 +793,13 @@ export class ControlStore {
           "UPDATE actions SET status = 'approved', approver_token_hash = ?, approved_by = ?, approved_at = ?, approval_expires_at = ? WHERE id = ?",
         )
         .run(digest(raw), actor.identity, now, fields.expiresAt, id);
-      this.audit('action.approved', actor.identity, actor.id, now);
+      this.audit(
+        'action.approved',
+        actor.identity,
+        actor.id,
+        actor.application,
+        now,
+      );
       return this.publicAction(this.action(id, actor.application), now);
     });
   }
@@ -757,7 +842,13 @@ export class ControlStore {
           "UPDATE actions SET status = 'executed', executed_at = ? WHERE id = ?",
         )
         .run(now, id);
-      this.audit('action.executed', actor.identity, actor.id, now);
+      this.audit(
+        'action.executed',
+        actor.identity,
+        actor.id,
+        actor.application,
+        now,
+      );
       return {
         action: this.publicAction(this.action(id, actor.application), now),
         receipt: { actionId: id, ...payload, executedAt: now, simulated: true },
@@ -782,7 +873,13 @@ export class ControlStore {
       this.db
         .prepare("UPDATE actions SET status = 'canceled' WHERE id = ?")
         .run(id);
-      this.audit('action.canceled', actor.identity, actor.id, now);
+      this.audit(
+        'action.canceled',
+        actor.identity,
+        actor.id,
+        actor.application,
+        now,
+      );
       return { ok: true };
     });
   }

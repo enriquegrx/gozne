@@ -45,8 +45,8 @@ deployment, require multiple approvers or provide cross-domain SSO.
 - [ ] Demonstrate an independent application integration and full recovery
       drill.
 - [ ] Establish binary reproducibility, signed artifacts and release checksums.
-- [ ] Review retention, pagination and operational scale before larger
-      deployments.
+- [x] Add bounded audit retention and cursor pagination in the private panel.
+- [ ] Review operational scale before larger deployments.
 
 ## Later product work
 

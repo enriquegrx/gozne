@@ -133,6 +133,7 @@ export class AuthStore {
         now,
         operator?.identity ?? null,
         operator?.id ?? null,
+        operator?.application ?? null,
       );
       return { changed: true };
     });
@@ -143,12 +144,13 @@ export class AuthStore {
     now: number,
     identity: string | null = null,
     session: string | null = null,
+    application: string | null = null,
   ): void {
     this.db
       .prepare(
-        'INSERT INTO audit(at, event, identity, session_id) VALUES (?, ?, ?, ?)',
+        'INSERT INTO audit(at, event, identity, session_id, application) VALUES (?, ?, ?, ?, ?)',
       )
-      .run(now, event, identity, session);
+      .run(now, event, identity, session, application);
     this.db
       .prepare(
         'DELETE FROM audit WHERE at < ? OR sequence <= (SELECT MAX(sequence) - 50000 FROM audit)',
@@ -241,7 +243,7 @@ export class AuthStore {
             )
           : null;
       if (!access) {
-        this.audit('login.denied', now);
+        this.audit('login.denied', now, null, null, challenge.application);
         return null;
       }
       const count = Number(
@@ -283,7 +285,13 @@ export class AuthStore {
             'UPDATE invitations SET accepted_at = COALESCE(accepted_at, ?) WHERE id = ?',
           )
           .run(now, access.identity.slice(6));
-      this.audit('login.succeeded', now, access.identity, sessionId);
+      this.audit(
+        'login.succeeded',
+        now,
+        access.identity,
+        sessionId,
+        challenge.application,
+      );
       return {
         sessionToken,
         id: sessionId,
@@ -404,14 +412,20 @@ export class AuthStore {
     return this.transaction(() => {
       const row = this.db
         .prepare(
-          'SELECT identity FROM sessions WHERE id = ? AND revoked_at IS NULL',
+          'SELECT identity, application FROM sessions WHERE id = ? AND revoked_at IS NULL',
         )
         .get(id);
       if (!row) return false;
       this.db
         .prepare('UPDATE sessions SET revoked_at = ? WHERE id = ?')
         .run(now, id);
-      this.audit('session.revoked', now, String(row.identity), id);
+      this.audit(
+        'session.revoked',
+        now,
+        String(row.identity),
+        id,
+        String(row.application),
+      );
       return true;
     });
   }
@@ -427,7 +441,7 @@ export class AuthStore {
   exportAudit() {
     return this.db
       .prepare(
-        'SELECT at, event, identity, session_id AS sessionId FROM audit ORDER BY sequence',
+        'SELECT at, event, identity, session_id AS sessionId, application FROM audit ORDER BY sequence',
       )
       .all();
   }

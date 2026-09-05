@@ -106,6 +106,12 @@ are public audit identifiers, not usable cookies. Policy changes invalidate all
 sessions, invitations and pending approvals. An identical policy import is a
 no-op; CLI edits detect concurrent changes.
 
+`audit export` includes each event's application where it is known. Interactive
+administrators see only their current application's events through the private
+API and panel. The database keeps at most 50,000 audit rows and removes rows
+older than 30 days as new events are written; export to an external archive when
+longer retention is required.
+
 ## Proxy integration
 
 Login, API and application share an HTTPS origin. Cookies are host-only; this

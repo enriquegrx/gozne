@@ -29,7 +29,8 @@
         ><a href="#users"
           ><span aria-hidden="true">♙</span> Users &amp; wallets</a
         ><a href="#sessions"><span aria-hidden="true">◎</span> Sessions</a
-        ><a href="#activity"><span aria-hidden="true">◷</span> Deployments</a>
+        ><a href="#activity"><span aria-hidden="true">◷</span> Deployments</a
+        ><a href="#audit"><span aria-hidden="true">≡</span> Audit trail</a>
       </nav>
       <div class="sidebar-bottom">
         <span class="dot"></span> Self-hosted, by you.
@@ -359,6 +360,45 @@
               <div id="deployment-list">
                 <p class="empty">No receipts loaded.</p>
               </div>
+            </section>
+            <section class="card" id="audit">
+              <div class="section-heading">
+                <div>
+                  <h2>Audit trail</h2>
+                  <p class="muted">
+                    Recent security events for this application.
+                  </p>
+                </div>
+                <span class="tag">ADMIN</span>
+              </div>
+              <label for="audit-event">Event type</label>
+              <select id="audit-event" disabled>
+                <option value="">All activity</option>
+                <option value="login.succeeded">Successful sign-ins</option>
+                <option value="login.denied">Denied sign-ins</option>
+                <option value="policy.applied">Policy changes</option>
+                <option value="invitation.created">Invitations created</option>
+                <option value="invitation.revoked">Invitations revoked</option>
+                <option value="action.requested">Actions requested</option>
+                <option value="action.proof-denied">
+                  Denied action signatures
+                </option>
+                <option value="action.approved">Actions approved</option>
+                <option value="action.executed">Actions executed</option>
+                <option value="action.canceled">Actions canceled</option>
+                <option value="session.revoked">Sessions closed</option>
+                <option value="session.revoked-by-admin">
+                  Sessions revoked by an administrator
+                </option>
+              </select>
+              <div id="audit-list" class="record-list">
+                <p class="empty">
+                  Sign in as an administrator to view the audit trail.
+                </p>
+              </div>
+              <button id="audit-more" type="button" class="secondary" disabled>
+                Load earlier events
+              </button>
             </section>
           </div>
           <aside

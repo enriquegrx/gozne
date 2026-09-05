@@ -152,6 +152,61 @@ export async function controlRoutes(
   app.get('/v1/auth/control', async (request) =>
     store.overview(request.cookies[SESSION_COOKIE]!, now()),
   );
+  app.get<{
+    Querystring: { before?: string; limit?: string; event?: string };
+  }>(
+    '/v1/auth/control/audit',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            before: {
+              type: 'string',
+              maxLength: 16,
+              pattern: '^[1-9][0-9]*$',
+            },
+            limit: {
+              type: 'string',
+              pattern: '^(?:[1-9]|[1-9][0-9]|100)$',
+            },
+            event: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 64,
+              pattern: '^[a-z][a-z0-9.-]*$',
+            },
+          },
+        },
+      },
+    },
+    async (request) => {
+      const before =
+        request.query.before === undefined
+          ? undefined
+          : Number(request.query.before);
+      if (before !== undefined && !Number.isSafeInteger(before))
+        throw new AuthError(
+          400,
+          'AUDIT_CURSOR_INVALID',
+          'Invalid audit cursor',
+        );
+      return store.auditTrail(
+        request.cookies[SESSION_COOKIE]!,
+        {
+          ...(before === undefined ? {} : { before }),
+          ...(request.query.limit === undefined
+            ? {}
+            : { limit: Number(request.query.limit) }),
+          ...(request.query.event === undefined
+            ? {}
+            : { event: request.query.event }),
+        },
+        now(),
+      );
+    },
+  );
   app.post<{ Params: { id: string } }>(
     '/v1/auth/control/sessions/:id/revoke',
     { schema: { params, body: empty } },

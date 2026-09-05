@@ -67,9 +67,16 @@ Fetch Metadata headers. No cross-origin CORS flow is provided.
 All paths below start with `/v1/auth/control`. They use the current session's
 application; clients cannot select another application in a mutation body.
 
+`GET /audit` is administrator-only and returns the newest audit events for that
+application. Use `limit` (1–100), the returned `nextBefore` cursor and an
+optional exact `event` filter. Each event includes its sequence, time, type,
+actor identity and public session ID. The response never contains session
+tokens, token hashes, signatures or signed payloads.
+
 | Method | Suffix                     | Required actor                               |
 | ------ | -------------------------- | -------------------------------------------- |
 | GET    | (none)                     | Any valid session                            |
+| GET    | `/audit`                   | Administrator                                |
 | POST   | `/invitations`             | Administrator with reader access             |
 | POST   | `/invitations/{id}/revoke` | Administrator                                |
 | POST   | `/actions`                 | Any valid session                            |

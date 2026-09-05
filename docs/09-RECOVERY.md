@@ -95,10 +95,11 @@ schema, first restore using its matching binary, then start the new binary on
 that recovered copy to migrate it. Test this sequence before changing live
 state.
 
-Schema 3 is additive and migrates existing authentication data. It does not
-promote existing users to admin. There are no down migrations. Do not run an old
-binary against a schema-3 database; use the pre-upgrade backup and matching
-image if rollback is needed, following the safe restoration procedure above.
+Schema 4 is additive and scopes existing audit records when their original
+session is still available. It does not promote existing users to admin. There
+are no down migrations. Do not run an old binary against a schema-4 database;
+use the pre-upgrade backup and matching image if rollback is needed, following
+the safe restoration procedure above.
 
 Tests cover committed WAL data, corruption, incompatible schemas, invalid
 policy, permissions, overwrite/symlink rejection and removal of sessions and

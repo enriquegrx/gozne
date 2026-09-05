@@ -127,6 +127,16 @@ function fixture(t: TestContext) {
       payload: body as Record<string, unknown>,
     });
   }
+  async function audit(browser: Browser, query = '') {
+    return app.inject({
+      method: 'GET',
+      url: `/v1/auth/control/audit${query}`,
+      headers: {
+        origin,
+        cookie: `__Host-gozne-session=${browser.raw}`,
+      },
+    });
+  }
   async function invite(browser: Browser, minutes = 30) {
     const result = await post(browser, 'invitations', {
       network: 'evm',
@@ -177,11 +187,89 @@ function fixture(t: TestContext) {
     invite,
     request,
     approve,
+    audit,
     advance: (milliseconds: number) => {
       now += milliseconds;
     },
   };
 }
+
+test('audit trail is administrator-only, application-scoped and paginated', async (t) => {
+  const f = fixture(t);
+  const demoOwner = await f.login();
+  await f.invite(demoOwner);
+  const guest = await f.login(f.guest);
+  assert.equal((await f.audit(guest)).statusCode, 403);
+
+  const otherOwner = await f.login(f.owner, 'other');
+  await f.request(otherOwner);
+
+  const filtered = await f.audit(
+    demoOwner,
+    '?event=invitation.created&limit=1',
+  );
+  assert.equal(filtered.statusCode, 200, filtered.body);
+  assert.deepEqual(
+    filtered.json<{ application: string; events: { event: string }[] }>(),
+    {
+      application: 'demo',
+      events: [
+        {
+          sequence: filtered.json<{ events: { sequence: number }[] }>()
+            .events[0]!.sequence,
+          at: filtered.json<{ events: { at: number }[] }>().events[0]!.at,
+          event: 'invitation.created',
+          identity: 'owner',
+          sessionId: demoOwner.response.json<{ id: string }>().id,
+        },
+      ],
+      nextBefore: null,
+    },
+  );
+
+  const first = await f.audit(demoOwner, '?limit=1');
+  assert.equal(first.statusCode, 200, first.body);
+  const firstPage = first.json<{
+    application: string;
+    events: { sequence: number; event: string }[];
+    nextBefore: number | null;
+  }>();
+  assert.equal(firstPage.application, 'demo');
+  assert.equal(firstPage.events.length, 1);
+  assert.ok(firstPage.nextBefore);
+  const second = await f.audit(
+    demoOwner,
+    `?limit=100&before=${firstPage.nextBefore}`,
+  );
+  const secondPage = second.json<{
+    events: { sequence: number; event: string }[];
+  }>();
+  assert.ok(secondPage.events.length >= 2);
+  assert.ok(
+    secondPage.events.every(
+      (event) => event.sequence !== firstPage.events[0]!.sequence,
+    ),
+  );
+
+  const other = await f.audit(otherOwner, '?limit=100');
+  assert.equal(other.statusCode, 200, other.body);
+  const otherPage = other.json<{
+    application: string;
+    events: { event: string }[];
+  }>();
+  assert.equal(otherPage.application, 'other');
+  assert.ok(
+    otherPage.events.some((event) => event.event === 'action.requested'),
+  );
+  assert.ok(
+    otherPage.events.every((event) => event.event !== 'invitation.created'),
+  );
+  assert.equal((await f.audit(demoOwner, '?limit=101')).statusCode, 400);
+  assert.equal(
+    (await f.audit(demoOwner, '?before=9999999999999999')).statusCode,
+    400,
+  );
+});
 
 test('wallet-bound invitation, signed exact action and concurrent one-time execution', async (t) => {
   const f = fixture(t);

@@ -103,9 +103,9 @@ could silently publish administration on every interface.
 
 1. Back up the live database and keep a copy outside its volume. Record the old
    image digest. Do not replace the current policy with the empty starter file.
-2. Build the new image and generate/provide the internal TLS files. Existing
-   schema version 3 is unchanged. Recreate all services with the updated Compose
-   file so their network membership and asset mounts change together.
+2. Build the new image and generate/provide the internal TLS files. The current
+   schema version is 4. Recreate all services with the updated Compose file so
+   their network membership and asset mounts change together.
 3. Export the live policy through the CLI. Add the intended `adminOrigin` to
    each application that needs a private workspace; preserve all existing
    wallets and grants. Validate and apply the edited policy using the

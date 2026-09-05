@@ -170,6 +170,20 @@ test('login and panel scripts coexist and render administrator actions without u
           sessions: [],
           deployments: [],
         };
+      if (url.startsWith('/v1/auth/control/audit?'))
+        result = {
+          application: 'demo',
+          events: [
+            {
+              sequence: 7,
+              at: Date.now(),
+              event: 'login.succeeded',
+              identity: 'owner',
+              sessionId: 'session',
+            },
+          ],
+          nextBefore: null,
+        };
       if (url.endsWith('/challenge'))
         result = {
           nonce: 'nonce',
@@ -209,6 +223,12 @@ test('login and panel scripts coexist and render administrator actions without u
   assert.equal(select('#invite-fields').disabled, false);
   assert.equal(select('#action-fields').disabled, false);
   assert.equal(select('#metric-pending').textContent, 1);
+  assert.equal(select('#audit-event').disabled, false);
+  assert.equal(select('#audit-more').disabled, true);
+  assert.equal(
+    select('#audit-list').children[0]!.children[0]!.children[0]!.textContent,
+    'login.succeeded',
+  );
   const record = select('#action-list').children[0]!;
   assert.equal(
     record.children[0]!.children[0]!.textContent,

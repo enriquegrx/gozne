@@ -146,6 +146,7 @@ unknown fields are rejected. All requests use the session's application.
 | Endpoint                                        | Body                                                             | Result                                                           |
 | ----------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
 | `GET /v1/auth/control`                          | None                                                             | Actions, invitation/session metadata for admins, recent receipts |
+| `GET /v1/auth/control/audit`                    | Query: `limit`, `before`, optional exact `event`                 | Administrator-only, application-scoped audit page                |
 | `POST /v1/auth/control/invitations`             | `{"network":"evm","address":"YOUR_PUBLIC_ADDRESS","minutes":30}` | Invitation ID, address, expiry, reader role and normal login URL |
 | `POST /v1/auth/control/invitations/{id}/revoke` | `{}`                                                             | `{"ok":true}`                                                    |
 | `POST /v1/auth/control/actions`                 | Canonical payload fields above                                   | Pending action and payload hash                                  |
@@ -178,14 +179,20 @@ real deployment merely because a browser supplies an approved-looking object. A
 future adapter must validate server-side authority and design durable delivery,
 idempotency and failure recovery for its actual external effect.
 
-The current audit stream stores event, actor identity, session ID and time;
-action/invitation tables provide operation details. Full signatures are not
-retained as portable verification receipts. A deployment receipt is operational
-evidence in the trusted database, not a standalone cryptographic certificate.
+The audit stream stores the application, event, actor identity, public session
+ID and time. The private panel can filter exact event types and page backwards
+through the history. Every query requires an administrator session and is
+restricted to that session's application. Session tokens, token hashes, full
+signatures and signed payloads are not returned or stored in the audit record;
+action and invitation tables hold the operation details. Events are retained for
+up to 30 days and the global audit table is capped at 50,000 rows. A deployment
+receipt is operational evidence in the trusted database, not a standalone
+cryptographic certificate.
 
 The dashboard supports automatic updates and bounded recent lists. Counters
-describe loaded records, not lifetime totals. History has no automatic archival
-yet. See [operational limits](08-OPERATIONS.md#current-limits).
+describe loaded records, not lifetime totals. The audit retention window is not
+an archival system; export records externally if policy requires longer
+retention. See [operational limits](08-OPERATIONS.md#current-limits).
 
 Restoration invalidates every invitation and pending approval. See
 [recovery](09-RECOVERY.md). Multi-person approval, scoped agent delegation,

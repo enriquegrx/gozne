@@ -23,6 +23,8 @@
   let refreshVersion = 0;
   let pollTimer;
   let retryDelay = 30000;
+  let auditEvents = [];
+  let auditNextBefore = null;
   function element(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -230,6 +232,45 @@
       list.append(row);
     }
   }
+  function renderAudit() {
+    const list = select('#audit-list');
+    list.replaceChildren();
+    if (!auditEvents.length)
+      return empty(list, t('No audit events match this filter.'));
+    for (const event of auditEvents) {
+      const row = element('article', undefined, 'record audit-record');
+      const head = element('div', undefined, 'record-head');
+      head.append(
+        element('h3', t(event.event)),
+        element('span', date(event.at), 'badge'),
+      );
+      row.append(
+        head,
+        element('p', event.identity || t('System')),
+        element(
+          'code',
+          event.sessionId
+            ? t('Session {session}', { session: short(event.sessionId) })
+            : '—',
+        ),
+      );
+      list.append(row);
+    }
+  }
+  async function loadAudit(append = false) {
+    if (!currentSession?.roles.includes('admin')) return;
+    const filter = select('#audit-event').value;
+    const parameters = new URLSearchParams({ limit: '25' });
+    if (filter) parameters.set('event', filter);
+    if (append && auditNextBefore)
+      parameters.set('before', String(auditNextBefore));
+    const result = await api(`control/audit?${parameters}`);
+    auditEvents = append ? [...auditEvents, ...result.events] : result.events;
+    auditNextBefore = result.nextBefore;
+    select('#audit-event').disabled = false;
+    select('#audit-more').disabled = !auditNextBefore;
+    renderAudit();
+  }
   function walletRow(wallet = { network: 'evm', address: '', enabled: true }) {
     const row = element('div', undefined, 'wallet-row');
     const networkLabel = element('label', t('Network'));
@@ -384,6 +425,10 @@
     select('#action-fields').disabled = true;
     select('#invite-fields').disabled = true;
     select('#refresh-panel').disabled = true;
+    select('#audit-event').disabled = true;
+    select('#audit-more').disabled = true;
+    auditEvents = [];
+    auditNextBefore = null;
     select('#connection-state').textContent = t('DISCONNECTED');
     select('#welcome').hidden = false;
     select('#invite-result').textContent = '';
@@ -398,6 +443,10 @@
       t('Administrator sign-in required to manage invitations.'),
     );
     empty(select('#deployment-list'), t('No receipts loaded.'));
+    empty(
+      select('#audit-list'),
+      t('Sign in as an administrator to view the audit trail.'),
+    );
     empty(
       select('#session-list'),
       t('Sign in as an administrator to manage sessions.'),
@@ -445,6 +494,7 @@
     renderInvitations(data.invitations);
     renderDeployments(data.deployments);
     renderSessions(data.sessions);
+    if (session.roles.includes('admin')) await loadAudit();
     if (session.roles.includes('admin') && !directory) await loadUsers();
   }
   function handleRefreshError(error) {
@@ -475,6 +525,13 @@
   select('#user-picker').addEventListener('change', editUser);
   select('#add-user-wallet').addEventListener('click', () => walletRow());
   select('#reload-users').addEventListener('click', () => busy(loadUsers));
+  select('#audit-event').addEventListener('change', () => {
+    loadAudit().catch(handleRefreshError);
+  });
+  select('#audit-more').addEventListener('click', () => {
+    select('#audit-more').disabled = true;
+    loadAudit(true).catch(handleRefreshError);
+  });
   select('#user-form').addEventListener('submit', (event) => {
     event.preventDefault();
     busy(async () => {

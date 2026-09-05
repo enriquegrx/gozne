@@ -170,6 +170,7 @@ try {
     '/applications.js',
     '/admin.html',
     '/v1/auth/control',
+    '/v1/auth/control/audit',
     '/v1/auth/control/users',
     '/v1/auth/control%2fusers',
   ])
@@ -375,6 +376,17 @@ try {
         );
       assert.equal((await execute()).status, 200);
       assert.equal((await execute()).status, 409);
+      const audit = await http('/v1/auth/control/audit?limit=100', {
+        internal: true,
+        cookie: admin.cookie,
+      });
+      assert.equal(audit.status, 200, audit.text);
+      const auditPage = JSON.parse(audit.text);
+      assert.equal(auditPage.application, application);
+      assert.ok(
+        auditPage.events.some((event) => event.event === 'action.executed'),
+      );
+      assert.equal(auditPage.nextBefore, null);
       assert.equal(
         (await control(`sessions/${guestSession.id}/revoke`)).status,
         200,

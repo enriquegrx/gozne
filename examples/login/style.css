@@ -1340,6 +1340,20 @@ body {
   color: var(--amber-dark);
 }
 
+.admin-page #audit-event {
+  max-width: 24rem;
+  margin: 0.45rem 0 1rem;
+}
+
+.admin-page #audit-more {
+  width: auto;
+  margin-top: 0.9rem;
+}
+
+.admin-page .audit-record h3 {
+  text-transform: none;
+}
+
 .admin-page .badge {
   background: rgba(9, 11, 11, 0.06);
   color: var(--ink-soft);

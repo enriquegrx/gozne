@@ -24,7 +24,7 @@ test('schema survives restart and database is owner-only', (t) => {
   const second = openStorage(path);
   second.check();
   second.close();
-  assert.equal(inspectStorage(path).schemaVersion, 3);
+  assert.equal(inspectStorage(path).schemaVersion, 4);
 });
 
 test('failed migration rolls back its DDL and migration record', () => {
@@ -36,8 +36,8 @@ test('failed migration rolls back its DDL and migration record', () => {
       migrate(db, [
         ...initial,
         {
-          version: 4,
-          name: '004-broken.sql',
+          version: 5,
+          name: '005-broken.sql',
           sql: 'CREATE TABLE partial (id INTEGER); INSERT INTO missing VALUES (1);',
         },
       ]),
@@ -49,7 +49,7 @@ test('failed migration rolls back its DDL and migration record', () => {
     assert.equal(
       db.prepare('SELECT COUNT(*) AS total FROM schema_migrations').get()
         ?.total,
-      3,
+      4,
     );
     assert.equal(db.isTransaction, false);
   } finally {
@@ -72,12 +72,43 @@ test('changed and newer migration histories are rejected', () => {
       ),
     );
     db.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?, ?)').run(
-      4,
-      '004-future.sql',
+      5,
+      '005-future.sql',
       'synthetic-checksum',
       'test',
     );
     assert.throws(() => migrate(db, migrations), /newer/);
+  } finally {
+    db.close();
+  }
+});
+
+test('audit migration backfills application from an existing session', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const migrations = loadMigrations();
+    migrate(db, migrations.slice(0, 3));
+    db.prepare(
+      'INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)',
+    ).run(
+      'hash',
+      'session-id',
+      'owner',
+      'demo',
+      'evm',
+      '0x0000000000000000000000000000000000000001',
+      'https://example.test',
+      1,
+      2,
+    );
+    db.prepare(
+      'INSERT INTO audit(at, event, identity, session_id) VALUES (?, ?, ?, ?)',
+    ).run(1, 'login.succeeded', 'owner', 'session-id');
+    assert.equal(migrate(db, migrations), 4);
+    assert.equal(
+      db.prepare('SELECT application FROM audit').get()?.application,
+      'demo',
+    );
   } finally {
     db.close();
   }

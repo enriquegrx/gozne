@@ -495,6 +495,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/auth/control/audit:
+    get:
+      summary: Read the current application's audit trail
+      description:
+        Administrator-only, newest-first event history for the current
+        application. Results use cursor pagination. The audit record contains
+        event metadata and public session identifiers, never session tokens,
+        signatures or signed payloads.
+      security:
+        - SessionCookie: []
+      parameters:
+        - in: query
+          name: before
+          schema:
+            type: integer
+            minimum: 1
+          description: Return events with a sequence below this cursor
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: event
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: ^[a-z][a-z0-9.-]*$
+          description: Return only this exact event type
+      responses:
+        '200':
+          description: Application-scoped audit page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPage'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Administrator role or origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /v1/auth/control/invitations:
     post:
       summary: Grant temporary reader access to an unconfigured wallet
@@ -1893,6 +1956,54 @@ components:
         - invitations
         - sessions
         - deployments
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+        at:
+          type: integer
+          description: Unix milliseconds
+        event:
+          type: string
+        identity:
+          type:
+            - string
+            - 'null'
+        sessionId:
+          type:
+            - string
+            - 'null'
+          description:
+            Public session identifier, never the session token or hash
+      required:
+        - sequence
+        - at
+        - event
+        - identity
+        - sessionId
+    AuditPage:
+      type: object
+      additionalProperties: false
+      properties:
+        application:
+          type: string
+        events:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        nextBefore:
+          type:
+            - integer
+            - 'null'
+          description: Pass as `before` to read the next page
+      required:
+        - application
+        - events
+        - nextBefore
     ActionChallenge:
       type: object
       additionalProperties: false

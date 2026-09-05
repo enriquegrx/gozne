@@ -39,7 +39,9 @@ flowchart LR
 SQLite uses WAL, `synchronous=FULL`, a one-second writer timeout and
 transactional migrations with checksums. Schema 2 introduced policy, nonces,
 sessions and audit. Schema 3 adds invitations, actions, action challenges and
-simulated deployments. Existing migration files are immutable.
+simulated deployments. Schema 4 scopes audit records to an application so
+administrators can inspect them safely in the private panel. Existing migration
+files are immutable.
 
 Login consumes its challenge and creates its session in one transaction. An
 approval is revalidated after asynchronous signature verification. Execution

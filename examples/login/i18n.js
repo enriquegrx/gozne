@@ -86,6 +86,7 @@
     'Users & wallets': 'Usuarios y wallets',
     Sessions: 'Sesiones',
     Deployments: 'Despliegues',
+    'Audit trail': 'Registro de auditoría',
     'Self-hosted, by you.': 'Alojado por ti.',
     'Documentation ↗': 'Documentación ↗',
     'Internal workspace': 'Espacio interno',
@@ -187,6 +188,26 @@
     'Simulated effects committed with their approvals.':
       'Efectos simulados registrados junto a sus aprobaciones.',
     'No receipts loaded.': 'No hay recibos cargados.',
+    'Recent security events for this application.':
+      'Eventos de seguridad recientes de esta aplicación.',
+    'Event type': 'Tipo de evento',
+    'All activity': 'Toda la actividad',
+    'Successful sign-ins': 'Inicios de sesión correctos',
+    'Denied sign-ins': 'Inicios de sesión denegados',
+    'Policy changes': 'Cambios de política',
+    'Invitations created': 'Invitaciones creadas',
+    'Invitations revoked': 'Invitaciones revocadas',
+    'Actions requested': 'Acciones solicitadas',
+    'Denied action signatures': 'Firmas de acción denegadas',
+    'Actions approved': 'Acciones aprobadas',
+    'Actions executed': 'Acciones ejecutadas',
+    'Actions canceled': 'Acciones canceladas',
+    'Sessions closed': 'Sesiones cerradas',
+    'Sessions revoked by an administrator':
+      'Sesiones revocadas por un administrador',
+    'Sign in as an administrator to view the audit trail.':
+      'Inicia sesión como administrador para ver el registro de auditoría.',
+    'Load earlier events': 'Cargar eventos anteriores',
     'Session and signing wallet': 'Sesión y wallet firmante',
     'Administration session': 'Sesión de administración',
     'WHAT YOU ARE SIGNING': 'QUÉ ESTÁS FIRMANDO',
@@ -281,6 +302,22 @@
       'Invitación creada para {address} hasta {expires}. Comparte esta dirección: ',
     'Invitation created. Only that wallet can use it; the link carries no access token.':
       'Invitación creada. Solo esa wallet puede usarla; el enlace no contiene ningún token de acceso.',
+    'No audit events match this filter.':
+      'Ningún evento de auditoría coincide con este filtro.',
+    System: 'Sistema',
+    'Session {session}': 'Sesión {session}',
+    'login.succeeded': 'Inicio de sesión correcto',
+    'login.denied': 'Inicio de sesión denegado',
+    'session.revoked': 'Sesión cerrada',
+    'session.revoked-by-admin': 'Sesión revocada por un administrador',
+    'policy.applied': 'Política aplicada',
+    'invitation.created': 'Invitación creada',
+    'invitation.revoked': 'Invitación revocada',
+    'action.requested': 'Acción solicitada',
+    'action.proof-denied': 'Firma de acción denegada',
+    'action.approved': 'Acción aprobada',
+    'action.executed': 'Acción ejecutada',
+    'action.canceled': 'Acción cancelada',
     'Application manager access. Select an application to edit its configuration.':
       'Acceso de gestor de aplicaciones. Selecciona una aplicación para editarla.',
     'Your accessible applications. Configuration requires an application manager.':

@@ -64,8 +64,8 @@ request and approve their own action for a quick single-wallet test; this is
   [application guide](docs/13-APPLICATIONS.md).
 - 🖥️ **A responsive control panel:** permanent users, wallets, roles,
   invitations, requests and deployment receipts, active-session revocation and
-  automatic updates. Built with local HTML, CSS and JavaScript, without a
-  frontend framework or CDN.
+  an application-scoped audit trail with filters and pagination. Built with
+  local HTML, CSS and JavaScript, without a frontend framework or CDN.
 - 🌍 **English and Spanish interfaces:** browser detection, an explicit language
   switcher, persistent preference and locale-aware dates across sign-in, the
   protected workspace and administration. See the
