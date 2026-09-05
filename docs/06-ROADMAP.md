@@ -20,6 +20,7 @@
 - [x] Administrator/collaborator walkthrough and HTTPS integration test.
 - [x] Schema migration and restoration rules for invitations and approvals.
 - [x] English README, API documentation and operator guides.
+- [x] English and Spanish browser interfaces with persistent locale selection.
 
 This MVP records simulated deployment receipts. It does not execute a real
 deployment, require multiple approvers or provide cross-domain SSO.
@@ -32,7 +33,7 @@ deployment, require multiple approvers or provide cross-domain SSO.
 - [x] Read-only deployment diagnostics and TLS expiry checks.
 - [x] Operator-controlled application definitions and workspace switching.
 - [x] Independent QUIQUE.ES workspace integration with full HTTPS tests.
-- [ ] Deploy the public/private origins on the target infrastructure and verify
+- [x] Deploy the public/private origins on the target infrastructure and verify
       external isolation.
 
 ## Before a stable release

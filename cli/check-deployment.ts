@@ -159,6 +159,7 @@ for (const surface of ['public', 'admin'] as const) {
         ? [
             ['/healthz', 200],
             ['/', 200],
+            ['/i18n.js', 200],
             ['/admin.html', 404],
             ['/panel.js', 404],
             ['/applications.js', 404],
@@ -168,6 +169,7 @@ for (const surface of ['public', 'admin'] as const) {
         : [
             ['/healthz', 200],
             ['/', 200],
+            ['/i18n.js', 200],
             ['/panel.js', 200],
             ['/applications.js', 200],
             ['/v1/auth/control/users', 401],

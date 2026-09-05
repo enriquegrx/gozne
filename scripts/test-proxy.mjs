@@ -283,6 +283,7 @@ try {
       assert.match(inside.text, /Welcome, tester/);
       assert.match(inside.text, /reader,admin/);
       assert.match(inside.text, /app\.quique\.es/);
+      assert.match(inside.text, /\/i18n\.js/);
       assert.match(inside.text, /Authentication cookie only/);
       assert.doesNotMatch(inside.text, /attacker|forged/);
     } else {
