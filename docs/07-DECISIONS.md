@@ -20,10 +20,13 @@ follow a real second consumer, not precede it.
 
 ## D-004 — Local policy administration, scoped web controls
 
-Implemented. The CLI owns policy, identity and wallet administration, diagnosis,
-session revocation and audit export. The web panel manages invitations and
-simulated actions through authenticated, application-scoped endpoints. It cannot
-edit arbitrary policy or promote a guest to administrator.
+Implemented. The CLI bootstraps operators and manages full policy, application
+configuration, cross-application wallet changes, diagnosis and audit export. The
+web panel manages application-scoped permanent users, wallets and roles as well
+as invitations, sessions and simulated actions. Shared identity wallets remain
+CLI-only. Effective policy edits invalidate authority across the instance. The
+panel currently uses the same-origin JSON API; internal-only administration and
+a separate dashboard container are pending architectural review.
 
 ## D-005 — Node.js and TypeScript
 

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
+import type { Identity } from '../policy/policy.js';
 import type { AuthStore } from '../auth/store.js';
 import { AuthError, invalidProof } from '../auth/errors.js';
 import { SESSION_COOKIE, originAllowed, sameSiteRead } from '../auth/routes.js';
@@ -53,6 +54,46 @@ export async function controlRoutes(
         'A valid CSRF token is required',
       );
   });
+  app.get('/v1/auth/control/users', async (request) =>
+    store.directory(request.cookies[SESSION_COOKIE]!, now()),
+  );
+  app.post<{
+    Body: {
+      revision: string;
+      create: boolean;
+      id: string;
+      wallets: Identity['wallets'];
+      roles: string[];
+    };
+  }>(
+    '/v1/auth/control/users',
+    {
+      schema: {
+        body: object({
+          revision: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+          create: { type: 'boolean' },
+          id: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
+          roles: {
+            type: 'array',
+            maxItems: 20,
+            uniqueItems: true,
+            items: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
+          },
+          wallets: {
+            type: 'array',
+            maxItems: 20,
+            items: object({
+              network: { enum: ['evm', 'solana'] },
+              address: { type: 'string', minLength: 32, maxLength: 64 },
+              enabled: { type: 'boolean' },
+            }),
+          },
+        }),
+      },
+    },
+    async (request) =>
+      store.saveUser(request.cookies[SESSION_COOKIE]!, request.body, now()),
+  );
   app.get('/v1/auth/control', async (request) =>
     store.overview(request.cookies[SESSION_COOKIE]!, now()),
   );

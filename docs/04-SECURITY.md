@@ -55,6 +55,11 @@ The starter policy authorizes no wallet. Attaching a wallet to its administrator
 identity is a deliberate local CLI operation. Existing users are not
 automatically promoted by a database migration.
 
+Permanent user writes require an administrator, an unchanged policy revision,
+and a second live authorization check inside the transaction. The API cannot
+edit another application's grants or mutate shared identity wallets. Current
+operator lockout is rejected. Policy-write failure rolls back invalidation.
+
 The static panel is publicly readable. The control API requires authentication;
 only session-scoped administrator routes expose invitation and session metadata.
 All mutations require CSRF and exact origin checks. The CLI and database volume

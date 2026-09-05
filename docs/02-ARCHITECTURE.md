@@ -62,6 +62,11 @@ the static policy must use that policy, even if disabled or unauthorized for the
 application. An invitation cannot bypass it. Dynamic guests receive only
 `reader`; the application must require no role other than `reader`.
 
+The panel can also submit application-scoped user edits through JSON. These use
+the same validated policy transaction with revision checking and live
+administrator authorization. The existing instance-wide invalidation rules
+apply. Cross-application wallet changes remain CLI-only.
+
 ## Frontend decision
 
 The panel uses local HTML, CSS and JavaScript. The API already owns state,

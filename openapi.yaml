@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.5
+  version: 0.1.0-dev.6
   description:
     Alpha EVM/SIWS authentication and signed simulation controls. API and login
     require the same HTTPS origin. Authentication returns 503 without a policy.
@@ -1191,6 +1191,157 @@ paths:
           schema:
             type: string
             format: uuid
+  /v1/auth/control/users:
+    get:
+      summary: Read the application-scoped administrator user directory
+      description:
+        Only administrators. Does not disclose other application grants. Shared
+        identity wallets are read-only; retain the revision for optimistic
+        updates.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDirectory'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create or update a permanent user for the current application
+      description:
+        Administrator, Origin and CSRF required. Full wallet list and
+        current-application roles only. Empty roles revoke access. Rejects stale
+        revisions, duplicate wallets, shared-wallet changes and current operator
+        lockout. Effective policy changes invalidate all sessions, invitations
+        and pending approvals across the instance. Unchanged input is a no-op.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdateResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Exact application HTTPS origin
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{64}$
 components:
   securitySchemes:
     LoginContext:
@@ -1609,3 +1760,92 @@ components:
         - approvalExpiresAt
         - executedAt
         - permissions
+    UserWallet:
+      type: object
+      additionalProperties: false
+      properties:
+        network:
+          type: string
+          enum:
+            - evm
+            - solana
+        address:
+          type: string
+          minLength: 32
+          maxLength: 64
+        enabled:
+          type: boolean
+      required:
+        - network
+        - address
+        - enabled
+    ManagedUser:
+      type: object
+      additionalProperties: false
+      properties:
+        id: &id008
+          type: string
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+        roles: &id009
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: *id008
+        wallets: &id011
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/UserWallet'
+        walletsEditable:
+          type: boolean
+      required:
+        - id
+        - roles
+        - wallets
+        - walletsEditable
+    UserDirectory:
+      type: object
+      additionalProperties: false
+      properties:
+        revision: &id010
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        application: *id008
+        requiredRoles: *id009
+        users:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/ManagedUser'
+      required:
+        - revision
+        - application
+        - requiredRoles
+        - users
+    UserUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        revision: *id010
+        create:
+          type: boolean
+        id: *id008
+        roles: *id009
+        wallets: *id011
+      required:
+        - revision
+        - create
+        - id
+        - roles
+        - wallets
+    UserUpdateResult:
+      type: object
+      additionalProperties: false
+      properties:
+        changed:
+          type: boolean
+        reauthenticationRequired:
+          type: boolean
+      required:
+        - changed
+        - reauthenticationRequired

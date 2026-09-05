@@ -564,3 +564,225 @@ test('action controls distinguish two live sessions of the same identity', async
     409,
   );
 });
+
+async function directory(
+  f: ReturnType<typeof fixture>,
+  owner: Awaited<ReturnType<ReturnType<typeof fixture>['login']>>,
+) {
+  const result = await f.app.inject({
+    method: 'GET',
+    url: '/v1/auth/control/users',
+    headers: { origin, cookie: `__Host-gozne-session=${owner.raw}` },
+  });
+  assert.equal(result.statusCode, 200, result.body);
+  return result.json<{
+    revision: string;
+    users: {
+      id: string;
+      wallets: {
+        network: 'evm' | 'solana';
+        address: string;
+        enabled: boolean;
+      }[];
+      roles: string[];
+      walletsEditable: boolean;
+    }[];
+  }>();
+}
+
+test('panel creates a permanent user and applies wallet/role edits with session invalidation', async (t) => {
+  const f = fixture(t);
+  let owner = await f.login();
+  let view = await directory(f, owner);
+  let result = await f.post(owner, 'users', {
+    revision: view.revision,
+    create: true,
+    id: 'collaborator',
+    wallets: [{ network: 'evm', address: f.guest.address, enabled: true }],
+    roles: ['reader'],
+  });
+  assert.equal(result.statusCode, 200, result.body);
+  assert.deepEqual(result.json(), {
+    changed: true,
+    reauthenticationRequired: true,
+  });
+  assert.equal(f.storage.auth.session(owner.raw, Date.now()), null);
+  const guest = await f.login(f.guest);
+  assert.equal(guest.response.statusCode, 200);
+  assert.equal(
+    (
+      await f.post(guest, 'users', {
+        revision: view.revision,
+        create: true,
+        id: 'unauthorized',
+        wallets: [],
+        roles: ['admin', 'reader'],
+      })
+    ).statusCode,
+    403,
+  );
+  owner = await f.login();
+  view = await directory(f, owner);
+  result = await f.post(owner, 'users', {
+    revision: view.revision,
+    create: false,
+    id: 'collaborator',
+    wallets: [{ network: 'evm', address: f.guest.address, enabled: false }],
+    roles: ['reader'],
+  });
+  assert.equal(result.statusCode, 200, result.body);
+  assert.equal((await f.login(f.guest)).response.statusCode, 401);
+  owner = await f.login();
+  view = await directory(f, owner);
+  result = await f.post(owner, 'users', {
+    revision: view.revision,
+    create: false,
+    id: 'collaborator',
+    wallets: [{ network: 'evm', address: f.other.address, enabled: true }],
+    roles: ['reader', 'admin'],
+  });
+  assert.equal(result.statusCode, 200, result.body);
+  assert.equal((await f.login(f.other)).response.statusCode, 200);
+  owner = await f.login();
+  view = await directory(f, owner);
+  result = await f.post(owner, 'users', {
+    revision: view.revision,
+    create: false,
+    id: 'collaborator',
+    wallets: [{ network: 'evm', address: f.other.address, enabled: true }],
+    roles: [],
+  });
+  assert.equal(result.statusCode, 200, result.body);
+  assert.equal((await f.login(f.other)).response.statusCode, 401);
+});
+
+test('panel rejects stale, duplicate, cross-application and self-lockout edits', async (t) => {
+  const f = fixture(t);
+  const owner = await f.login();
+  const view = await directory(f, owner);
+  const self = view.users.find((user) => user.id === 'owner')!;
+  assert.equal(self.walletsEditable, false);
+  const base = {
+    revision: view.revision,
+    create: false,
+    id: 'owner',
+    wallets: self.wallets,
+    roles: self.roles,
+  };
+  assert.equal(
+    (await f.post(owner, 'users', { ...base, revision: '0'.repeat(64) }))
+      .statusCode,
+    409,
+  );
+  assert.equal(
+    (await f.post(owner, 'users', { ...base, roles: ['reader'] })).statusCode,
+    409,
+  );
+  assert.equal(
+    (await f.post(owner, 'users', { ...base, wallets: [] })).statusCode,
+    409,
+  );
+  assert.equal(
+    (await f.post(owner, 'users', { ...base, id: 'missing' })).statusCode,
+    409,
+  );
+  assert.equal(
+    (await f.post(owner, 'users', { ...base, create: true, id: 'duplicate' }))
+      .statusCode,
+    400,
+  );
+  assert.equal(
+    (await f.post(owner, 'users', { ...base, grants: { other: ['admin'] } }))
+      .statusCode,
+    400,
+  );
+  assert.equal(
+    (await f.post(owner, 'users', base, { origin: 'https://evil.test' }))
+      .statusCode,
+    403,
+  );
+  assert.equal(
+    (await f.post(owner, 'users', base, { 'x-csrf-token': 'bad' })).statusCode,
+    403,
+  );
+  const unchanged = await f.post(owner, 'users', base);
+  assert.equal(unchanged.statusCode, 200, unchanged.body);
+  assert.equal(unchanged.json<{ changed: boolean }>().changed, false);
+  assert.ok(f.storage.auth.session(owner.raw, Date.now()));
+  assert.equal(f.storage.auth.policy()!.digest, view.revision);
+});
+
+test('policy writes from the panel roll back on audit failure and recheck a revoked operator', async (t) => {
+  const f = fixture(t);
+  const owner = await f.login();
+  const view = await directory(f, owner);
+  const input = {
+    revision: view.revision,
+    create: true,
+    id: 'collaborator',
+    wallets: [],
+    roles: ['reader'],
+  };
+  const db = new DatabaseSync(f.path);
+  db.exec(
+    "CREATE TRIGGER fail_panel_policy BEFORE INSERT ON audit WHEN NEW.event = 'policy.applied' BEGIN SELECT RAISE(ABORT, 'synthetic'); END",
+  );
+  assert.equal((await f.post(owner, 'users', input)).statusCode, 503);
+  assert.equal(f.storage.auth.policy()!.digest, view.revision);
+  assert.ok(f.storage.auth.session(owner.raw, Date.now()));
+  db.exec('DROP TRIGGER fail_panel_policy');
+  db.close();
+  f.storage.auth.revoke(owner.response.json<{ id: string }>().id);
+  assert.throws(
+    () =>
+      f.storage.auth.applyPolicy(
+        f.storage.auth.policy()!.policy,
+        view.revision,
+        { token: owner.raw, now: Date.now() },
+      ),
+    /administrator/,
+  );
+});
+
+test('unrelated application identities stay hidden and an unshared operator wallet cannot be removed', async (t) => {
+  const f = fixture(t);
+  const policy = structuredClone(f.storage.auth.policy()!.policy);
+  delete policy.identities[0]!.grants.other;
+  policy.identities.push({
+    id: 'private-other-user',
+    wallets: [{ network: 'evm', address: f.other.address, enabled: true }],
+    grants: { other: ['reader'] },
+  });
+  f.storage.auth.applyPolicy(policy);
+  const owner = await f.login();
+  const view = await directory(f, owner);
+  assert.equal(
+    view.users.some((user) => user.id === 'private-other-user'),
+    false,
+  );
+  const input = {
+    revision: view.revision,
+    create: false,
+    id: 'private-other-user',
+    wallets: [],
+    roles: ['reader', 'admin'],
+  };
+  assert.equal((await f.post(owner, 'users', input)).statusCode, 409);
+  assert.equal(
+    (await f.post(owner, 'users', { ...input, create: true })).statusCode,
+    409,
+  );
+  const self = view.users.find((user) => user.id === 'owner')!;
+  assert.equal(self.walletsEditable, true);
+  const denied = await f.post(owner, 'users', {
+    ...input,
+    id: 'owner',
+    wallets: self.wallets.filter((wallet) => wallet.network !== 'evm'),
+  });
+  assert.equal(denied.statusCode, 409);
+  assert.equal(
+    denied.json<{ error: { code: string } }>().error.code,
+    'SELF_LOCKOUT',
+  );
+  assert.equal(f.storage.auth.policy()!.digest, view.revision);
+});

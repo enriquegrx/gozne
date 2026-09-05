@@ -1,5 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { validatePolicy } from '../policy/policy.js';
+import type { Identity } from '../policy/policy.js';
 import { AuthError } from '../auth/errors.js';
 import { AuthStore, digest } from '../auth/store.js';
 import {
@@ -177,6 +179,131 @@ export class ControlStore {
         .all(actor.application),
     };
   }
+  directory(raw: string, now: number) {
+    const actor = this.actor(raw, now, true);
+    const current = this.auth.policy()!;
+    const app = current.policy.applications.find(
+      (app) => app.id === actor.application,
+    )!;
+    return {
+      revision: current.digest,
+      application: actor.application,
+      requiredRoles: app.requiredRoles,
+      users: current.policy.identities
+        .filter((identity) => Object.hasOwn(identity.grants, actor.application))
+        .map((identity) => ({
+          id: identity.id,
+          wallets: identity.wallets,
+          roles: identity.grants[actor.application]!,
+          walletsEditable: !Object.keys(identity.grants).some(
+            (app) => app !== actor.application,
+          ),
+        })),
+    };
+  }
+
+  saveUser(
+    raw: string,
+    input: {
+      revision: string;
+      create: boolean;
+      id: string;
+      wallets: Identity['wallets'];
+      roles: string[];
+    },
+    now: number,
+  ) {
+    const actor = this.actor(raw, now, true);
+    const current = this.auth.policy()!;
+    if (current.digest !== input.revision)
+      throw new AuthError(
+        409,
+        'POLICY_CONFLICT',
+        'Policy changed. Reload users before saving',
+      );
+    const policy = structuredClone(current.policy);
+    let identity = policy.identities.find(
+      (identity) => identity.id === input.id,
+    );
+    if (
+      input.create
+        ? !!identity
+        : !identity || !Object.hasOwn(identity.grants, actor.application)
+    )
+      throw new AuthError(
+        409,
+        'USER_CONFLICT',
+        'This user cannot be created or edited here',
+      );
+    if (!identity) {
+      identity = { id: input.id, wallets: [], grants: {} };
+      policy.identities.push(identity);
+    }
+    let wallets: Identity['wallets'];
+    try {
+      wallets = input.wallets.map((wallet) => ({
+        network: wallet.network,
+        address: canonicalAddress(wallet.network, wallet.address),
+        enabled: wallet.enabled,
+      }));
+    } catch {
+      throw new AuthError(400, 'ADDRESS_INVALID', 'Invalid wallet address');
+    }
+    if (
+      Object.keys(identity.grants).some((app) => app !== actor.application) &&
+      JSON.stringify(identity.wallets) !== JSON.stringify(wallets)
+    )
+      throw new AuthError(
+        409,
+        'SHARED_IDENTITY',
+        'Wallets shared with another application must be managed through the operator CLI',
+      );
+    identity.wallets = wallets;
+    identity.grants[actor.application] = input.roles;
+    if (
+      actor.identity === identity.id &&
+      (!input.roles.includes('admin') ||
+        !wallets.some(
+          (wallet) =>
+            wallet.enabled &&
+            wallet.network === actor.network &&
+            wallet.address === actor.address,
+        ))
+    )
+      throw new AuthError(
+        409,
+        'SELF_LOCKOUT',
+        'Keep your current administrator wallet and role enabled',
+      );
+    const app = policy.applications.find(
+      (app) => app.id === actor.application,
+    )!;
+    if (
+      input.roles.length &&
+      !app.requiredRoles.every((role) => input.roles.includes(role))
+    )
+      throw new AuthError(
+        400,
+        'REQUIRED_ROLES',
+        'Include all application-required roles, or clear all roles to revoke access',
+      );
+    let validated;
+    try {
+      validated = validatePolicy(policy);
+    } catch {
+      throw new AuthError(
+        400,
+        'USER_INVALID',
+        'Invalid roles, duplicate wallet or policy limit exceeded',
+      );
+    }
+    const result = this.auth.applyPolicy(validated, input.revision, {
+      token: raw,
+      now,
+    });
+    return { ...result, reauthenticationRequired: result.changed };
+  }
+
   revokeSession(raw: string, id: string, now: number) {
     return this.transaction(() => {
       const actor = this.actor(raw, now, true);

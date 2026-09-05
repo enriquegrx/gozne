@@ -106,6 +106,11 @@ for an administrator to revoke another session in the current application. It
 requires an empty JSON body, Origin and CSRF. The current session must use
 logout.
 
+`GET` and `POST /v1/auth/control/users` provide the administrator user directory
+and revision-checked permanent user edits. See the
+[panel guide](11-CONTROL-PANEL.md#permanent-users-wallets-and-application-roles)
+for scope, shared-wallet restrictions and instance-wide session invalidation.
+
 ## Errors
 
 ```json

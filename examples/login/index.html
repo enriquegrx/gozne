@@ -23,6 +23,8 @@
           ><span aria-hidden="true">▦</span> Overview</a
         ><a href="#actions"><span aria-hidden="true">↗</span> Signed actions</a
         ><a href="#invitations"><span aria-hidden="true">◇</span> Invitations</a
+        ><a href="#users"
+          ><span aria-hidden="true">♙</span> Users &amp; wallets</a
         ><a href="#sessions"><span aria-hidden="true">◎</span> Sessions</a
         ><a href="#activity"><span aria-hidden="true">◷</span> Deployments</a>
       </nav>
@@ -182,6 +184,74 @@
                   Administrator sign-in required to manage invitations.
                 </p>
               </div>
+            </section>
+            <section class="card" id="users">
+              <div class="section-heading">
+                <div>
+                  <h2>Users &amp; wallets</h2>
+                  <p class="muted">Permanent access to this application.</p>
+                </div>
+                <span class="tag">ADMIN</span>
+              </div>
+              <p class="note">
+                Saving a policy change signs everyone out, revokes temporary
+                invitations and cancels pending approvals across this Gozne
+                instance. Keep related edits together in one save.
+              </p>
+              <button
+                id="reload-users"
+                type="button"
+                class="secondary"
+                disabled
+              >
+                Reload users
+              </button>
+              <p id="users-status" role="status">
+                Administrator sign-in required.
+              </p>
+              <form id="user-form">
+                <fieldset id="user-fields" disabled>
+                  <label for="user-picker">Select a user</label
+                  ><select id="user-picker">
+                    <option value="">Create a new user</option>
+                  </select>
+                  <div class="form-row">
+                    <label
+                      >User ID<input
+                        id="user-id"
+                        required
+                        maxlength="64"
+                        pattern="[a-z][a-z0-9-]{0,63}"
+                        placeholder="collaborator" /></label
+                    ><label
+                      >Roles (comma-separated)<input
+                        id="user-roles"
+                        maxlength="1300"
+                        placeholder="reader"
+                    /></label>
+                  </div>
+                  <p class="note" id="user-role-help">
+                    Clear all roles to revoke permanent access. The admin role
+                    grants administration for this application.
+                  </p>
+                  <fieldset id="user-wallet-fields">
+                    <legend>Public wallets</legend>
+                    <div id="user-wallets"></div>
+                    <button
+                      id="add-user-wallet"
+                      type="button"
+                      class="secondary"
+                    >
+                      Add wallet
+                    </button>
+                  </fieldset>
+                  <p class="note" id="user-wallet-help">
+                    Add, disable or remove a wallet. Never enter a private key
+                    or seed phrase.
+                  </p>
+                  <button type="submit">Save user and apply policy</button>
+                </fieldset>
+              </form>
             </section>
             <section class="card" id="sessions">
               <div class="section-heading">

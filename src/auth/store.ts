@@ -71,11 +71,24 @@ export class AuthStore {
     return this.cache;
   }
 
-  applyPolicy(value: unknown, expectedDigest?: string): { changed: boolean } {
+  applyPolicy(
+    value: unknown,
+    expectedDigest?: string,
+    administrator?: { token: string; now: number },
+  ): { changed: boolean } {
     const policy = validatePolicy(value);
     const document = JSON.stringify(policy);
     const hash = digest(document);
     return this.transaction(() => {
+      const operator = administrator
+        ? this.session(administrator.token, administrator.now)
+        : null;
+      if (administrator && !operator?.roles.includes('admin'))
+        throw new AuthError(
+          403,
+          'ADMIN_REQUIRED',
+          'A live administrator session is required',
+        );
       const current = this.policy();
       if (expectedDigest !== undefined && current?.digest !== expectedDigest)
         throw new AuthError(
@@ -101,7 +114,12 @@ export class AuthStore {
           'UPDATE invitations SET revoked_at = ? WHERE revoked_at IS NULL',
         )
         .run(now);
-      this.audit('policy.applied', now);
+      this.audit(
+        'policy.applied',
+        now,
+        operator?.identity ?? null,
+        operator?.id ?? null,
+      );
       return { changed: true };
     });
   }

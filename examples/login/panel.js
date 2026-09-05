@@ -7,6 +7,7 @@
   const short = (value) =>
     value.length > 24 ? `${value.slice(0, 12)}…${value.slice(-8)}` : value;
   let currentSession = null;
+  let directory = null;
   let refreshVersion = 0;
   let pollTimer;
   let retryDelay = 30000;
@@ -200,6 +201,87 @@
       list.append(row);
     }
   }
+  function walletRow(wallet = { network: 'evm', address: '', enabled: true }) {
+    const row = element('div', undefined, 'wallet-row');
+    const networkLabel = element('label', 'Network');
+    const network = element('select');
+    network.className = 'wallet-network';
+    for (const name of ['evm', 'solana']) {
+      const option = element('option', name.toUpperCase());
+      option.value = name;
+      network.append(option);
+    }
+    network.value = wallet.network;
+    networkLabel.append(network);
+    const addressLabel = element('label', 'Public address');
+    const address = element('input');
+    address.className = 'wallet-address';
+    address.value = wallet.address;
+    address.required = true;
+    address.maxLength = 64;
+    addressLabel.append(address);
+    const enabledLabel = element('label', 'Enabled');
+    const enabled = element('input');
+    enabled.type = 'checkbox';
+    enabled.className = 'wallet-enabled';
+    enabled.checked = wallet.enabled;
+    enabledLabel.append(enabled);
+    const remove = element('button', 'Remove', 'secondary');
+    remove.type = 'button';
+    remove.addEventListener('click', () => row.remove());
+    row.append(networkLabel, addressLabel, enabledLabel, remove);
+    select('#user-wallets').append(row);
+  }
+  function editUser() {
+    if (!directory) return;
+    const user = directory.users.find(
+      (user) => user.id === select('#user-picker').value,
+    );
+    select('#user-id').value = user?.id ?? '';
+    select('#user-id').readOnly = !!user;
+    select('#user-roles').value = (user?.roles ?? directory.requiredRoles).join(
+      ', ',
+    );
+    select('#user-wallets').replaceChildren();
+    for (const wallet of user?.wallets ?? []) walletRow(wallet);
+    select('#user-wallet-fields').disabled = user
+      ? !user.walletsEditable
+      : false;
+    select('#user-wallet-help').textContent =
+      user && !user.walletsEditable
+        ? 'These wallets are shared with another application. Only application roles can be edited here; use the operator CLI for shared wallets.'
+        : 'Add, disable or remove public wallets. Never enter private keys or seed phrases.';
+  }
+  async function loadUsers() {
+    if (!currentSession?.roles.includes('admin')) return;
+    const sessionId = currentSession.id;
+    const result = await api('control/users');
+    if (
+      currentSession?.id !== sessionId ||
+      window.gozneSession?.id !== sessionId
+    )
+      return;
+    directory = result;
+    const picker = select('#user-picker');
+    picker.replaceChildren();
+    const first = element('option', 'Create a new user');
+    first.value = '';
+    picker.append(first);
+    for (const user of result.users) {
+      const option = element(
+        'option',
+        `${user.id} · ${user.roles.join(', ') || 'No access'}`,
+      );
+      option.value = user.id;
+      picker.append(option);
+    }
+    picker.value = '';
+    select('#user-fields').disabled = false;
+    select('#reload-users').disabled = false;
+    select('#users-status').textContent =
+      `${result.users.length} users in ${result.application}. Required roles: ${result.requiredRoles.join(', ') || 'none'}. Reloading discards unsaved edits.`;
+    editUser();
+  }
   function renderSessions(sessions) {
     const list = select('#session-list');
     list.replaceChildren();
@@ -248,6 +330,14 @@
   }
   function signedOut() {
     currentSession = null;
+    directory = null;
+    select('#user-fields').disabled = true;
+    select('#reload-users').disabled = true;
+    select('#user-wallets').replaceChildren();
+    select('#user-picker').replaceChildren();
+    select('#user-id').value = '';
+    select('#user-roles').value = '';
+    select('#users-status').textContent = 'Administrator sign-in required.';
     select('#action-fields').disabled = true;
     select('#invite-fields').disabled = true;
     select('#refresh-panel').disabled = true;
@@ -309,6 +399,7 @@
     renderInvitations(data.invitations);
     renderDeployments(data.deployments);
     renderSessions(data.sessions);
+    if (session.roles.includes('admin') && !directory) await loadUsers();
   }
   function handleRefreshError(error) {
     if (error.status === 401) {
@@ -333,6 +424,45 @@
     busy(() => refresh().catch(handleRefreshError).finally(scheduleRefresh)),
   );
   select('#auto-refresh').addEventListener('change', scheduleRefresh);
+  select('#user-picker').addEventListener('change', editUser);
+  select('#add-user-wallet').addEventListener('click', () => walletRow());
+  select('#reload-users').addEventListener('click', () => busy(loadUsers));
+  select('#user-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    busy(async () => {
+      if (!directory || !currentSession?.roles.includes('admin'))
+        throw new Error('Reload users from an administrator session.');
+      const wallets = Array.from(
+        select('#user-wallets').querySelectorAll('.wallet-row'),
+        (row) => ({
+          network: row.querySelector('.wallet-network').value,
+          address: row.querySelector('.wallet-address').value.trim(),
+          enabled: row.querySelector('.wallet-enabled').checked,
+        }),
+      );
+      const roles = select('#user-roles')
+        .value.split(',')
+        .map((role) => role.trim())
+        .filter(Boolean);
+      const result = await mutate('users', {
+        revision: directory.revision,
+        create: !select('#user-picker').value,
+        id: select('#user-id').value.trim(),
+        wallets,
+        roles,
+      });
+      if (result.reauthenticationRequired) {
+        window.gozneSession = null;
+        select('#session').hidden = true;
+        window.dispatchEvent(new window.Event('gozne:session'));
+        select('#status').textContent =
+          'User saved. Policy changed; all sessions and temporary grants were invalidated. Sign in again.';
+      } else {
+        select('#users-status').textContent =
+          'No policy changes were needed. Your session remains active.';
+      }
+    });
+  });
   select('#action-form').addEventListener('submit', (event) => {
     event.preventDefault();
     busy(async () => {

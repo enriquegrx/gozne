@@ -249,6 +249,58 @@ try {
         302,
       );
     }
+    if (network === 'solana') {
+      const directory = await http('/v1/auth/control/users', { cookie });
+      assert.equal(directory.status, 200, directory.text);
+      const saved = await http('/v1/auth/control/users', {
+        cookie,
+        headers: { 'x-csrf-token': session.csrfToken },
+        body: {
+          revision: JSON.parse(directory.text).revision,
+          create: true,
+          id: 'permanent-reader',
+          wallets: [],
+          roles: ['reader'],
+        },
+      });
+      assert.equal(saved.status, 200, saved.text);
+      assert.equal(JSON.parse(saved.text).reauthenticationRequired, true);
+      assert.equal((await http('/private/', { cookie })).status, 302);
+      const nextNonce = await http('/v1/auth/nonce', {
+        body: {
+          application: 'demo',
+          network: 'evm',
+          address: eth.address,
+          chainId: '1',
+        },
+      });
+      assert.equal(nextNonce.status, 200, nextNonce.text);
+      const nextProof = JSON.parse(nextNonce.text);
+      const nextLogin = await http('/v1/auth/verify', {
+        cookie: cookieFrom(nextNonce, '__Host-gozne-login'),
+        body: {
+          nonce: nextProof.nonce,
+          message: nextProof.message,
+          signature: await eth.signMessage(nextProof.message),
+        },
+      });
+      assert.equal(nextLogin.status, 200, nextLogin.text);
+      const nextCookie = cookieFrom(nextLogin, '__Host-gozne-session');
+      assert.equal(
+        (
+          await http('/v1/auth/logout', {
+            cookie: nextCookie,
+            body: {},
+            headers: { 'x-csrf-token': JSON.parse(nextLogin.text).csrfToken },
+          })
+        ).status,
+        200,
+      );
+      assert.equal(
+        (await http('/private/', { cookie: nextCookie })).status,
+        302,
+      );
+    }
     if (network === 'evm')
       compose(
         'exec',
@@ -259,17 +311,6 @@ try {
         'revoke',
         session.id,
         '--json',
-      );
-    else
-      assert.equal(
-        (
-          await http('/v1/auth/logout', {
-            cookie,
-            body: {},
-            headers: { 'x-csrf-token': session.csrfToken },
-          })
-        ).status,
-        200,
       );
     assert.equal((await http('/private/', { cookie })).status, 302);
   }
@@ -316,7 +357,7 @@ try {
     'proxy must fail closed when Gozne is unavailable',
   );
   console.log(
-    'HTTPS/Nginx verified: EVM + SIWS login, header sanitation, CLI revocation, logout, wallet-bound invitation, signed action, one-time execution, backup/restore and failure closure.',
+    'HTTPS/Nginx verified: EVM + SIWS login, header sanitation, CLI and panel revocation, logout, permanent user management, wallet-bound invitation, signed action, one-time execution, backup/restore and failure closure.',
   );
 } catch (error) {
   // These are isolated synthetic services; request bodies and signatures are not logged.

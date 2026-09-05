@@ -59,9 +59,10 @@ request and approve their own action for a quick single-wallet test; this is
   immediate revocation, without rewriting the main policy.
 - ✍️ **Signed intent:** exact deployment parameters, fresh proof and one-time
   execution of a local simulation.
-- 🖥️ **A responsive control panel:** invitations, requests and deployment
-  receipts, active-session revocation and automatic updates. Built with local
-  HTML, CSS and JavaScript, without a frontend framework or CDN.
+- 🖥️ **A responsive control panel:** permanent users, wallets, roles,
+  invitations, requests and deployment receipts, active-session revocation and
+  automatic updates. Built with local HTML, CSS and JavaScript, without a
+  frontend framework or CDN.
 - 🗃️ **SQLite and a CLI:** transactional migrations, policy administration,
   audit export, live backups and recovery.
 - 🐳 **A complete local setup:** non-root containers, Nginx and HTTPS on

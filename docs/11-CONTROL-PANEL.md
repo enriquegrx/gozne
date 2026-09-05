@@ -218,3 +218,70 @@ skips wallet interactions and other pending operations. Turn it off with the
 checkbox or refresh manually. Failed background requests back off to 60 and then
 120 seconds; a successful refresh resets the interval. An invalid session clears
 the workspace and stops polling. The panel does not extend a session's lifetime.
+
+## Permanent users, wallets and application roles
+
+**Users & wallets** manages the static policy for the signed-in administrator's
+application. Use **Reload users**, choose an existing identity or **Create a new
+user**, enter its ID, assign roles and add public EVM/Solana wallet addresses.
+Each wallet can be enabled, disabled or removed. Save related edits together.
+IDs cannot be renamed. Clearing all roles revokes permanent access to this
+application while retaining the identity for later reauthorization; the panel
+has no destructive identity-delete operation.
+
+A nonempty grant must include every role required by the application. `admin`
+gives administrative privileges for this application; `reader` is ordinary
+access in the example. The panel prevents removing the current administrator's
+role or disabling/removing the wallet used by that session. The first operator
+still needs local CLI bootstrap; public visitors cannot create an administrator.
+
+Wallets belong to global identities in the current policy model. If an identity
+has a grant entry for another application, its wallet list is read-only here.
+You can change its roles in the current application without changing its other
+grants. Use the privileged CLI to manage shared wallets. Identity IDs and wallet
+addresses cannot be silently taken over from an existing unrelated identity.
+
+Saving is an atomic, validated policy update with an optimistic revision check.
+A stale editor receives `409 POLICY_CONFLICT`; reload and review before
+retrying. The operator's live administrator session is checked again inside the
+write transaction. Invalid addresses, duplicate wallets and failed audit writes
+leave the previous policy and sessions intact. Identical edits are a no-op.
+
+**An effective policy change invalidates all sessions, invitations and pending
+approvals across the Gozne instance**, including the administrator's session.
+The panel explains this before saving and returns to sign-in afterward. This is
+the same conservative behavior as CLI policy imports; it is not limited to the
+edited user's sessions. In contrast, the session and invitation revocation
+buttons act on their individual targets.
+
+### JSON API
+
+- `GET /v1/auth/control/users`: administrator-only directory containing
+  `revision`, `application`, `requiredRoles` and `users`. Each user includes
+  `id`, `wallets`, current-application `roles` and `walletsEditable`.
+- `POST /v1/auth/control/users`: accepts `revision`, `create`, `id`, a full
+  `wallets` array (`network`, `address`, `enabled`) and current-application
+  `roles`. Origin, session cookie and CSRF are required. It returns `changed`
+  and `reauthenticationRequired`.
+
+The server chooses the application from the session, not from submitted JSON.
+The directory is deliberately loaded on sign-in or explicit reload, so
+background refresh does not overwrite an unsaved editor. It contains at most the
+policy's 1,000 identities, with at most 20 wallets and 20 roles per
+identity/application. Full policy export, application definitions and
+cross-application changes remain local CLI operations.
+
+### Deployment boundary: current behavior versus next design
+
+The panel talks to the gateway through a same-origin JSON/HTTP API. It is still
+served by the demo's existing Nginx and protected by application-role checks.
+**This change does not make the administration routes internal-only.**
+Publishing that proxy would also publish those authenticated routes.
+
+A separate dashboard container and an internal administration origin/network are
+planned for architectural review, not implemented here. A container boundary
+alone does not make an API private: ingress rules must also keep administrative
+routes off the public authentication listener. A future split must explicitly
+handle administrator authentication, host-only cookies, Origin/CSRF checks and
+service authorization; it should not share the database directly with a browser
+frontend or expose a privileged API token to browser JavaScript.

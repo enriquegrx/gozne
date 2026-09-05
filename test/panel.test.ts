@@ -12,6 +12,10 @@ test('login and panel scripts coexist and render administrator actions without u
     hidden = false;
     checked = true;
     type = '';
+    readOnly = false;
+    querySelectorAll() {
+      return this.children;
+    }
     className = '';
     href = '';
     children: Element[] = [];
@@ -113,6 +117,17 @@ test('login and panel scripts coexist and render administrator actions without u
         headers: options.headers,
       });
       let result: unknown = session;
+      if (url === '/v1/auth/control/users')
+        result = options.body
+          ? { changed: true, reauthenticationRequired: true }
+          : {
+              revision: 'a'.repeat(64),
+              application: 'demo',
+              requiredRoles: ['reader'],
+              users: [],
+            };
+      if (url === '/v1/auth/nonce')
+        result = { nonce: 'nonce', message: 'Login' };
       if (url === '/v1/auth/control')
         result = {
           actions: [
@@ -237,4 +252,24 @@ test('login and panel scripts coexist and render administrator actions without u
   assert.equal(select('#connection-state').textContent, 'DISCONNECTED');
   assert.equal(select('#invite-fields').disabled, true);
   assert.equal(select('#action-fields').disabled, true);
+  revoked = false;
+  await select('#evm').handlers.get('click')!();
+  await setImmediate();
+  select('#user-id').value = 'collaborator';
+  select('#user-roles').value = 'reader';
+  select('#user-form').handlers.get('submit')!({ preventDefault() {} });
+  await setImmediate();
+  const save = requests.find(
+    (request) => request.url === '/v1/auth/control/users' && request.body,
+  )!;
+  assert.deepEqual(save.body, {
+    revision: 'a'.repeat(64),
+    create: true,
+    id: 'collaborator',
+    wallets: [],
+    roles: ['reader'],
+  });
+  assert.equal(save.headers['X-CSRF-Token'], 'csrf');
+  assert.equal(select('#user-fields').disabled, true);
+  assert.match(select('#status').textContent, /User saved/);
 });
