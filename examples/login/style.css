@@ -1494,12 +1494,47 @@ body {
 }
 
 @media (max-width: 660px) {
+  body {
+    overflow-x: hidden;
+  }
+
   .admin-page main {
     padding: 2rem 1rem;
   }
 
   .admin-page .topbar {
+    gap: 0.75rem;
     padding: 0 1rem;
+  }
+
+  .admin-page .topbar > div {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-page .pill {
+    flex: 0 0 auto;
+    padding-inline: 0.5rem;
+    font-size: 0.5rem;
+  }
+
+  .admin-page .page-heading {
+    flex-direction: column;
+  }
+
+  .admin-page .sync-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-page .metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-page .metrics span {
+    display: block;
   }
 
   .admin-page h1 {
