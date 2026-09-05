@@ -31,13 +31,9 @@
           <span id="connection-state" class="tag">DISCONNECTED</span>
         </div>
         <p class="muted">Choose the extension you want to use.</p>
-        <label for="application-id">Application ID</label
-        ><input
-          id="application-id"
-          maxlength="64"
-          pattern="[a-z][a-z0-9-]{0,63}"
-          value="quique"
-        /><label for="evm-wallet">EVM wallet</label
+        <input id="application-id" type="hidden" value="quique" /><label
+          for="evm-wallet"
+          >EVM wallet</label
         ><select id="evm-wallet" aria-describedby="evm-help">
           <option value="">Choose a wallet</option>
           <option id="wallet-rabby" value="io.rabby" disabled>
