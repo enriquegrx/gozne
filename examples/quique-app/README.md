@@ -90,6 +90,11 @@ Required external configuration:
   Validate the files before recreating `admin-panel` and configure a scoped
   renewal hook to refresh them. Issuance on the certificate host alone does not
   update the serving container.
+- Automated delivery may use `scripts/install-gozne-certificate.py` as the
+  forced command of a dedicated, restricted SSH key. It accepts only a bounded
+  certificate payload, checks the hostname, expiry and matching private key,
+  validates Nginx, reloads `admin-panel` and restores the previous files if
+  validation fails.
 - Deployment diagnostics: pass the exact internal listener to
   `gozne check-deployment --admin-bind INTERNAL_IP`; the default permits only
   loopback.
