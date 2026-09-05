@@ -3,6 +3,13 @@
 The QUIQUE.ES setup gives Gozne two deliberately different doors with one visual
 identity.
 
+The application UI and protected workspace were extracted into the independent
+`APP.QUIQUE.ES` project from commit `b73625a` on 6 September 2026. Production
+continues using this repository's embedded copy until a coordinated deployment
+switches the protected upstream. After that switch, Gozne remains mandatory: it
+serves the wallet flow, validates every session and injects the trusted identity
+headers consumed by the application.
+
 ## The public door 🔑
 
 `https://app.quique.es` is the wallet sign-in application. It is reachable from

@@ -33,6 +33,10 @@ deployment, require multiple approvers or provide cross-domain SSO.
 - [x] Read-only deployment diagnostics and TLS expiry checks.
 - [x] Operator-controlled application definitions and workspace switching.
 - [x] Independent QUIQUE.ES workspace integration with full HTTPS tests.
+- [x] Extract the QUIQUE.ES product source into its own local project while
+      preserving the mandatory Gozne contract.
+- [ ] Switch the production protected upstream to the independent application
+      image after cross-repository verification.
 - [x] Deploy the public/private origins on the target infrastructure and verify
       external isolation.
 

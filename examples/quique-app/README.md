@@ -1,5 +1,11 @@
 # quique.es workspace integration
 
+The product source was extracted on 6 September 2026 into the independent
+`APP.QUIQUE.ES` project, from Gozne commit `b73625a`. This embedded copy remains
+the production source until the cross-repository migration is completed. Gozne
+continues to own wallet discovery, proof verification, sessions, policy and the
+public/private proxy boundary; the application must never replace that flow.
+
 A small independent HTTP application protected by Gozne, with the ivory, ink and
 amber visual style shared by quique.es and pass.quique.es. Its public access
 screen reuses the family header and footer, removes the decorative grid and
