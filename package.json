@@ -1,0 +1,36 @@
+{
+  "name": "gozne",
+  "version": "0.1.0-dev.1",
+  "description": "Self-hosted wallet authentication gateway — Firma. Gira. Entra.",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=24.20.0 <25"
+  },
+  "bin": {
+    "gozne": "dist/cli/gozne.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/cli/gozne.js serve",
+    "cli": "node dist/cli/gozne.js",
+    "test": "node --test dist/test/*.test.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && npm run build && npm test"
+  },
+  "dependencies": {
+    "fastify": "5.12.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.3",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.69.0"
+  }
+}

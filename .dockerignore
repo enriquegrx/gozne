@@ -1,0 +1,10 @@
+**
+!package.json
+!package-lock.json
+!.npmrc
+!tsconfig.json
+!src/**
+!cli/**
+!test/**
+!migrations/**
+!scripts/healthcheck.mjs

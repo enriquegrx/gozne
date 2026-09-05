@@ -1,0 +1,20 @@
+name: gozne-dev
+services:
+  gozne-gateway:
+    build: .
+    image: gozne:dev
+    ports:
+      - '127.0.0.1:3001:3001'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    volumes:
+      - gozne-state:/app/state
+    restart: unless-stopped
+    pids_limit: 100
+    mem_limit: 256m
+volumes:
+  gozne-state:

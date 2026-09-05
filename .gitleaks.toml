@@ -1,0 +1,6 @@
+title = "Gozne repository scan"
+[extend]
+useDefault = true
+[[allowlists]]
+description = "Generated dependencies and local build/state directories"
+paths = ['''(^|/)node_modules/''', '''(^|/)dist/''', '''(^|/)state/''', '''(^|/)reports/''']

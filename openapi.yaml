@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: Gozne
+  version: 0.1.0-dev.1
+  description: Esqueleto técnico. La autenticación todavía no está implementada.
+paths:
+  /healthz:
+    get:
+      summary: Comprobar proceso y lectura del almacenamiento
+      responses:
+        '200':
+          description: El proceso puede consultar su base de datos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /version:
+    get:
+      summary: Consultar versión y estado del desarrollo
+      responses:
+        '200':
+          description: Información de esta versión.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, version, stage, authentication]
+                properties:
+                  name: { type: string, const: gozne }
+                  version: { type: string }
+                  stage: { type: string, const: bootstrap }
+                  authentication: { type: boolean, const: false }
+  /v1/auth/validate:
+    get:
+      summary: Reservado para forward-auth; siempre deniega en esta fase
+      responses:
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  responses:
+    Unavailable:
+      description: Servicio no disponible; el proxy debe denegar el acceso.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                required: [code, message, request_id]
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+                  request_id: { type: string, format: uuid }
