@@ -1,6 +1,7 @@
 name: quique-workspace-server
 services:
   gateway:
+    restart: unless-stopped
     networks: [public-backend]
     environment:
       GOZNE_SURFACE: public
@@ -16,6 +17,7 @@ services:
     mem_limit: 256m
     pids_limit: 100
   demo-app:
+    restart: unless-stopped
     networks: [public-backend]
     image: gozne:dev
     command: [node, /demo/server.mjs]
@@ -36,6 +38,7 @@ services:
       timeout: 3s
       retries: 10
   proxy:
+    restart: unless-stopped
     networks: [public-entry, public-backend]
     image: nginxinc/nginx-unprivileged:stable-alpine@sha256:9b87ad3dd9f431c733f19dfb278c7eb3dba9dca381942c79818bb42f1a566a83
     entrypoint: [nginx, -g, 'daemon off;']
@@ -60,6 +63,7 @@ services:
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ./style.css:/usr/share/nginx/html/style.css:ro
   admin-api:
+    restart: unless-stopped
     image: gozne:dev
     environment:
       GOZNE_SURFACE: admin
@@ -73,6 +77,7 @@ services:
     mem_limit: 256m
     pids_limit: 100
   admin-panel:
+    restart: unless-stopped
     image: nginxinc/nginx-unprivileged:stable-alpine@sha256:9b87ad3dd9f431c733f19dfb278c7eb3dba9dca381942c79818bb42f1a566a83
     entrypoint:
       - sh
