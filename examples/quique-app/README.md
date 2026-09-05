@@ -10,6 +10,11 @@ identity, roles, wallet and session expiry, and supports logout. It is a
 starting workspace, not a business application with invented data or
 deployments.
 
+The public authentication page and internal operator workspace intentionally
+share typography, color, cards and interaction states. Their responsibilities,
+network boundaries and production routes are recorded in the
+[QUIQUE.ES deployment guide](../../docs/14-QUIQUE-DEPLOYMENT.md).
+
 `server.mjs` imports only Node's HTTP module. It verifies no wallet signatures,
 reads no cookies and imports no Gozne libraries. The isolated proxy supplies
 identity headers after live authorization, stripping all client-supplied

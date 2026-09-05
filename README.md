@@ -135,6 +135,8 @@ separation, public route denial and TLS expiry. See the
 
 The [QUIQUE.ES workspace example](examples/quique-app/README.md) demonstrates a
 separate protected application with its own interface and no wallet libraries.
+Its [production layout and shared visual language](docs/14-QUIQUE-DEPLOYMENT.md)
+document the public authentication door and the private operator workspace.
 
 ## How the pieces fit
 
@@ -197,6 +199,7 @@ imported. Keep `/v1/auth/validate` internal to the proxy.
   [Roadmap](docs/06-ROADMAP.md)
 - [Architecture decisions](docs/07-DECISIONS.md) ·
   [Project provenance](docs/05-CLEAN-ORIGIN.md)
+- [QUIQUE.ES public and private deployment](docs/14-QUIQUE-DEPLOYMENT.md)
 - [Contributing](CONTRIBUTING.md) · [Reporting a vulnerability](SECURITY.md)
 
 The repository is public, but a distribution license has not been selected. No

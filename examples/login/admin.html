@@ -4,19 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#101312" />
     <title>Gozne · Access, with intent.</title>
     <link rel="stylesheet" href="/style.css" />
     <script src="/login.js" defer></script>
     <script src="/panel.js" defer></script>
     <script src="/applications.js" defer></script>
   </head>
-  <body>
+  <body class="admin-page">
     <a class="skip" href="#main">Skip to content</a>
     <aside class="sidebar">
       <a class="brand" href="/" aria-label="Gozne home"
-        ><span class="brand-mark">g</span>gozne<span class="alpha"
-          >ALPHA</span
-        ></a
+        ><span class="brand-mark" aria-hidden="true"></span><span>gozne</span
+        ><span class="alpha">INTERNAL</span></a
       >
       <p class="nav-label">WORKSPACE</p>
       <nav aria-label="Workspace">
@@ -39,7 +39,7 @@
     <div class="workspace">
       <header class="topbar">
         <div>
-          <span class="muted">Workspace</span><span class="divider">/</span
+          <span class="muted">Gozne</span><span class="divider">/</span
           ><strong>Internal workspace</strong>
         </div>
         <span class="pill">Private administration</span>
@@ -436,9 +436,15 @@
           </aside>
         </div>
         <footer>
-          Gozne · Sign. Turn. Enter.<span
-            >Alpha software · No external security audit</span
+          <span>Gozne · Sign. Turn. Enter.</span>
+          <span class="footer-links"
+            ><a href="https://quique.es/en/">quique.es</a
+            ><a href="https://pass.quique.es">pass</a
+            ><a href="https://github.com/enriquegrx/gozne"
+              >documentation</a
+            ></span
           >
+          <span>Private administration · No invasive tracking</span>
         </footer>
       </main>
     </div>
