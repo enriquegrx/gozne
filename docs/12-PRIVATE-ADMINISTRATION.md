@@ -150,3 +150,61 @@ processes retain existing audit transactions and fail-closed behavior.
 cross-connection policy visibility. `scripts/test-proxy.mjs` verifies real HTTPS
 on separate ports, denied public routes/assets, private user management, public
 session invalidation, invitation login and signed simulation controls.
+
+## Check a running deployment
+
+Run this **on the Docker host**, from the repository root, with Node.js 24.20.0
+and Docker Compose available:
+
+```sh
+npm run build
+DOCKER_CONTEXT=orbstack npm run deployment:check
+```
+
+The command is read-only: it inspects the running project and makes
+unauthenticated HTTPS GET requests. It does not modify policy, restart
+containers, install certificates, or require a wallet. It checks actual port
+bindings, internal backend networks, separation between public and
+administrative services, API surface settings, named state-volume mounts, public
+route denial and private API authentication. HTTPS certificate validation stays
+enabled, and certificates with less than 48 hours remaining produce a renewal
+warning.
+
+It is a snapshot of the supplied Compose topology, not continuous monitoring or
+an external network audit. It does not inspect host firewalls, VPN rules,
+OrbStack sharing, other projects or external reverse proxies. It does not
+exercise authenticated operations or prove that a private address is unreachable
+from every external network. Those authentication flows are tested separately.
+The expected service names are those in the supplied demo Compose files.
+
+The npm command includes Node's system CA store for the OrbStack public origin.
+For the local panel, it reads `examples/compose/tls/cert.pem` as an explicit
+trust anchor. This does **not** add that certificate to browser or
+operating-system trust stores. Custom certificates, URLs and project names can
+be supplied:
+
+```sh
+npm run deployment:check -- \
+  --compose examples/compose/compose.yaml \
+  --project gozne-demo \
+  --public-origin https://localhost:8443 \
+  --admin-origin https://127.0.0.1:9443 \
+  --public-ca examples/compose/tls/cert.pem \
+  --admin-ca examples/compose/tls/cert.pem \
+  --json
+```
+
+Use `--help` for the options. JSON output contains a top-level `status` and a
+`findings` array with stable check names, `pass`/`warn`/`fail` status and a
+message. No Docker environment dumps, cookies, policy contents or private keys
+are printed. Exit code `0` means all checks passed, `1` means a failure, and `2`
+means a certificate renewal warning without other failures. This makes it
+suitable for your deployment scripts. It reports TLS errors as failures, never
+retries them with certificate verification disabled.
+
+If the local certificate expires, replace the demo certificate files
+deliberately or supply renewed files from your CA, then recreate `admin-panel`
+so its bind mounts use the new files. Portable Compose also uses these files in
+`proxy`. Review/trust a replacement self-signed certificate in your browser as
+needed. Do not delete or replace the database volume during certificate
+maintenance.

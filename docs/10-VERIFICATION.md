@@ -123,3 +123,10 @@ loopback publication and disjoint network membership, checks public dashboard
 assets/control routes return 404, then uses independent signed private sessions
 for invitations, user management and simulated actions. Public wallet login and
 protected application access remain part of the same test.
+
+The HTTPS integration test also runs the deployment diagnostic against its
+isolated Compose project. A healthy deployment must pass; stopping `admin-api`
+must fail the diagnostic while public health remains successful. Unit tests
+cover all-interface port bindings, published API ports, shared networks,
+incorrect surfaces, frontend state mounts, missing/duplicate/stopped services
+and certificate warning/expiry boundaries.

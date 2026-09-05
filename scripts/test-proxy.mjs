@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:https';
 import { createServer } from 'node:net';
@@ -80,6 +80,36 @@ try {
     '--json',
   );
   compose('up', '-d', '--wait', '--wait-timeout', '90');
+  const deploymentCheck = () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        'dist/cli/check-deployment.js',
+        '--compose',
+        'examples/compose/compose.yaml',
+        '--project',
+        project,
+        '--public-origin',
+        origin,
+        '--admin-origin',
+        adminOrigin,
+        '--public-ca',
+        join(directory, 'cert.pem'),
+        '--admin-ca',
+        join(directory, 'cert.pem'),
+        '--json',
+      ],
+      { env, encoding: 'utf8', timeout: 45000 },
+    );
+    assert.ifError(result.error);
+    return { exit: result.status, report: JSON.parse(result.stdout) };
+  };
+  const healthyDeployment = deploymentCheck();
+  assert.equal(
+    healthyDeployment.exit,
+    0,
+    JSON.stringify(healthyDeployment.report),
+  );
   const ca = readFileSync(join(directory, 'cert.pem'));
   const http = (path, { body, cookie, headers = {}, internal = false } = {}) =>
     new Promise((resolve, reject) => {
@@ -428,6 +458,19 @@ try {
   assert.equal(restoredCommand('doctor').status, 'ok');
   assert.deepEqual(restoredCommand('session', 'list').sessions, []);
   assert.equal(restoredCommand('policy', 'export').identities[0].id, 'tester');
+  compose('stop', 'admin-api');
+  const degradedDeployment = deploymentCheck();
+  assert.equal(degradedDeployment.exit, 1);
+  assert.ok(
+    degradedDeployment.report.findings.some(
+      (f) => f.check === 'admin-api.running' && f.status === 'fail',
+    ),
+  );
+  assert.ok(
+    degradedDeployment.report.findings.some(
+      (f) => f.check === 'public/healthz' && f.status === 'pass',
+    ),
+  );
   compose('stop', 'gateway');
   assert.ok(
     [500, 502, 503].includes((await http('/private/')).status),

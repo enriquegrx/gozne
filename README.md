@@ -125,6 +125,11 @@ For portable HTTPS and proxy integration, see
 [operations](docs/08-OPERATIONS.md). The root Compose file runs only the API on
 `127.0.0.1:3001`; browser authentication needs an HTTPS reverse proxy.
 
+Check the running demo at any time with `npm run build` followed by
+`DOCKER_CONTEXT=orbstack npm run deployment:check`. It checks service
+separation, public route denial and TLS expiry. See the
+[diagnostic options](docs/12-PRIVATE-ADMINISTRATION.md#check-a-running-deployment).
+
 ## How the pieces fit
 
 ```mermaid

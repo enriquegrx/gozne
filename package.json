@@ -1,6 +1,6 @@
 {
   "name": "gozne",
-  "version": "0.1.0-dev.7",
+  "version": "0.1.0-dev.8",
   "description": "Self-hosted wallet authentication and signed action approvals",
   "private": true,
   "license": "UNLICENSED",
@@ -19,7 +19,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && npm run lint && npm run build && npm test"
+    "check": "npm run format:check && npm run lint && npm run build && npm test",
+    "deployment:check": "node --use-system-ca dist/cli/check-deployment.js"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.2",
