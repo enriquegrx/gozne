@@ -48,19 +48,28 @@ function containers(): ContainerState[] {
   ];
 }
 const internal = new Set(['public-backend', 'admin-backend']);
-const failures = (state: ContainerState[], networks = internal) =>
-  inspectBoundary(state, networks)
+const failures = (
+  state: ContainerState[],
+  networks = internal,
+  allowedAdminHosts?: Set<string>,
+) =>
+  inspectBoundary(state, networks, allowedAdminHosts)
     .filter((f) => f.status === 'fail')
     .map((f) => f.check);
-test('deployment diagnostics reject published APIs and non-loopback administrative bindings', () => {
+test('deployment diagnostics reject published APIs and unapproved administrative bindings', () => {
   const state = containers();
   assert.deepEqual(failures(state), []);
   state[4]!.ports.push({ host: '::', port: '9443' });
   state[3]!.ports.push({ host: '127.0.0.1', port: '3001' });
   assert.deepEqual(failures(state), [
     'admin-api.ports',
-    'admin-panel.loopback',
+    'admin-panel.bind-address',
   ]);
+});
+test('deployment diagnostics accept an explicitly approved private admin address', () => {
+  const state = containers();
+  state[4]!.ports = [{ host: '172.26.200.110', port: '443' }];
+  assert.deepEqual(failures(state, internal, new Set(['172.26.200.110'])), []);
 });
 test('deployment diagnostics detect network drift, wrong surfaces and frontend state mounts', () => {
   const state = containers();

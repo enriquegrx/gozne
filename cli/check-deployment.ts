@@ -16,6 +16,7 @@ const { values } = parseArgs({
     project: { type: 'string', default: 'gozne-demo' },
     'public-origin': { type: 'string', default: 'https://gozne.orb.local' },
     'admin-origin': { type: 'string', default: 'https://127.0.0.1:9443' },
+    'admin-bind': { type: 'string', default: '127.0.0.1,::1' },
     'public-ca': { type: 'string' },
     'admin-ca': { type: 'string', default: 'examples/compose/tls/cert.pem' },
     json: { type: 'boolean', default: false },
@@ -24,7 +25,7 @@ const { values } = parseArgs({
 });
 if (values.help) {
   console.log(
-    'Read-only Compose deployment check.\nOptions: --compose FILE --project NAME --public-origin HTTPS_ORIGIN --admin-origin HTTPS_ORIGIN --public-ca FILE --admin-ca FILE --json\nExit codes: 0 pass, 1 failure, 2 certificate renewal warning. Run on the Docker host.',
+    'Read-only Compose deployment check.\nOptions: --compose FILE --project NAME --public-origin HTTPS_ORIGIN --admin-origin HTTPS_ORIGIN --admin-bind IP[,IP] --public-ca FILE --admin-ca FILE --json\nExit codes: 0 pass, 1 failure, 2 certificate renewal warning. Run on the Docker host.',
   );
   process.exit(0);
 }
@@ -107,6 +108,12 @@ try {
     ...inspectBoundary(
       containers,
       new Set(inspected.filter((n) => n.Internal).map((n) => n.Name)),
+      new Set(
+        values['admin-bind']
+          .split(',')
+          .map((host) => host.trim())
+          .filter(Boolean),
+      ),
     ),
   );
 } catch {

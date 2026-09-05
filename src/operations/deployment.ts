@@ -15,6 +15,7 @@ export interface Finding {
 export function inspectBoundary(
   containers: ContainerState[],
   internalNetworks: Set<string>,
+  allowedAdminHosts = new Set(['127.0.0.1', '::1']),
 ): Finding[] {
   const findings: Finding[] = [];
   const check = (name: string, ok: boolean, message: string) => {
@@ -54,12 +55,10 @@ export function inspectBoundary(
       );
     if (container.service === 'admin-panel')
       check(
-        'admin-panel.loopback',
+        'admin-panel.bind-address',
         container.ports.length > 0 &&
-          container.ports.every(
-            (p) => p.host === '127.0.0.1' || p.host === '::1',
-          ),
-        'Every administrative port must bind to loopback',
+          container.ports.every((p) => allowedAdminHosts.has(p.host)),
+        'Every administrative port must bind to an explicitly allowed address',
       );
     if (['proxy', 'admin-panel'].includes(container.service))
       check(

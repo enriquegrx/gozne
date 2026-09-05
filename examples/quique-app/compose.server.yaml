@@ -88,7 +88,7 @@ services:
         'daemon off;'
     networks: [admin-entry, admin-backend]
     ports:
-      - '${QUIQUE_BIND_ADDRESS:-127.0.0.1}:3013:8080'
+      - '${QUIQUE_ADMIN_BIND_ADDRESS:-127.0.0.1}:${QUIQUE_ADMIN_PORT:-9443}:8443'
     depends_on:
       admin-api:
         condition: service_healthy
@@ -104,6 +104,7 @@ services:
       - ../login/panel.js:/usr/share/nginx/html/panel.js:ro
       - ../login/applications.js:/usr/share/nginx/html/applications.js:ro
       - ../login/style.css:/usr/share/nginx/html/style.css:ro
+      - ${QUIQUE_TLS_DIRECTORY:-./tls}:/etc/nginx/tls:ro
 networks:
   public-entry:
   public-backend:

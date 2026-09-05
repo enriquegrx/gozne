@@ -57,19 +57,22 @@ The quique policy intentionally accepts Solana mainnet only in both preview and
 production. Authentication signs a SIWS message and does not submit a
 transaction or incur a fee.
 
-## Target server deployment (prepared, not activated by the local preview)
+## Target server deployment
 
 `compose.server.yaml` defines a separate project from the existing QUIQUE.ES
-website. It serves public authentication on origin port 3012 and administration
-on origin port 3013, with no directly published API or application container.
-The default bind address is loopback. Set `QUIQUE_BIND_ADDRESS` to the Docker
-server's internal address only after reviewing source restrictions.
+website. It serves public authentication on origin port 3012 and terminates
+private administration TLS in Gozne's own Nginx container. The admin listener
+defaults to loopback port 9443. Production may set `QUIQUE_ADMIN_BIND_ADDRESS`
+to the Docker server's internal address and `QUIQUE_ADMIN_PORT=443` after
+reviewing source restrictions. No API or protected application container has a
+published port.
 
 `public.server.conf` permits origin traffic from the designated Cloudflare
-connector; `admin.server.conf` permits only the internal Nginx host. Neither
+connector. `admin.server.conf` accepts only the configured internal LAN and VPN
+ranges and rejects the Cloudflare connector before serving the panel. Neither
 trusts a caller-supplied forwarding header to override its source-address rule.
-Review these environment-specific IP allowlists before applying them elsewhere.
-The public proxy still has no administrative routes or panel assets.
+The public proxy still has no administrative routes or panel assets. Adjust the
+private ranges when deploying on a different network.
 
 Use a private copy of `policy.server.example.json`, attach the intended
 operator's **public wallet** and set `QUIQUE_POLICY_FILE` to that file. It has
@@ -80,15 +83,16 @@ tmpfs at start.
 Required external configuration:
 
 - Cloudflare Tunnel: `app.quique.es` to the Docker host's port 3012.
-- Internal hosts/DNS: `gozne.quique.es` to the internal Nginx host.
-- Internal Nginx: review/install `gozne.internal.nginx.conf`, using the
-  certificate issued on `pki01`; allow only the actual internal/VPN client
-  ranges. Never put this hostname in the public tunnel.
-- Certificate delivery: copy the full chain and private key securely from the
-  Certbot lineage, validate them, then run `nginx -t` before reload. Configure a
-  scoped renewal deployment hook so renewed files reach this Nginx host.
-  Issuance/renewal on the certificate host alone does not update the serving
-  host.
+- Internal hosts/DNS: `gozne.quique.es` to the Docker host's internal address.
+  Never put this hostname in the public tunnel.
+- Private TLS: set `QUIQUE_TLS_DIRECTORY` to a root-owned directory containing
+  `fullchain.pem` and `privkey.pem`, delivered from the `pki01` Certbot lineage.
+  Validate the files before recreating `admin-panel` and configure a scoped
+  renewal hook to refresh them. Issuance on the certificate host alone does not
+  update the serving container.
+- Deployment diagnostics: pass the exact internal listener to
+  `gozne check-deployment --admin-bind INTERNAL_IP`; the default permits only
+  loopback.
 
 The provided hostname and source-IP configuration targets the owner's existing
 infrastructure. Deploy under a new release directory, inspect Compose before
