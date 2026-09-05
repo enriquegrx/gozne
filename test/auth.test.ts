@@ -14,6 +14,7 @@ import { openStorage } from '../src/storage/database.js';
 import { validatePolicy } from '../src/policy/policy.js';
 import { CONTEXT_COOKIE, SESSION_COOKIE } from '../src/auth/routes.js';
 import { token } from '../src/auth/store.js';
+import { backupDatabase, restoreDatabase } from '../src/storage/recovery.js';
 
 const origin = 'https://docs.example.test';
 function fixture(t: TestContext) {
@@ -574,4 +575,154 @@ test('invalid JSON, excessive payloads, unknown fields and per-IP abuse are boun
     ).statusCode;
   }
   assert.equal(last, 429);
+});
+
+test('a restored backup preserves policy but cannot resurrect sessions or pending proofs', async (t) => {
+  const f = fixture(t);
+  const session = await login(f);
+  const issued = await challenge(f);
+  const backup = join(f.directory, 'backup.sqlite');
+  const restored = join(f.directory, 'restored.sqlite');
+  await backupDatabase(f.path, backup);
+  f.storage.auth.revoke(session.id);
+  await restoreDatabase(backup, restored);
+  const recovered = openStorage(restored);
+  const app = buildApp(
+    { ...f.config, databasePath: restored },
+    recovered,
+    () => f.clock.value,
+  );
+  try {
+    assert.deepEqual(recovered.auth.policy()?.policy, f.policy);
+    assert.equal(
+      (
+        await app.inject({
+          url: '/v1/auth/me',
+          headers: browser(session.cookie),
+        })
+      ).statusCode,
+      401,
+    );
+    assert.equal(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/v1/auth/verify',
+          headers: browser(issued.cookie),
+          payload: {
+            nonce: issued.nonce,
+            message: issued.message,
+            signature: await f.eth.signMessage(issued.message),
+          },
+        })
+      ).statusCode,
+      401,
+    );
+    assert.equal(recovered.auth.listSessions().length, 0);
+    assert.equal(
+      recovered.auth.exportAudit().at(-1)?.event,
+      'database.restored',
+    );
+    // Fresh authentication works with the recovered policy.
+    await login({ ...f, app, storage: recovered });
+  } finally {
+    await app.close();
+  }
+});
+
+test('failed policy and logout audit writes leave live sessions and policy intact', async (t) => {
+  const f = fixture(t);
+  const session = await login(f);
+  const pending = await challenge(f);
+  const control = new DatabaseSync(f.path);
+  try {
+    control.exec(
+      "CREATE TRIGGER reject_audit BEFORE INSERT ON audit BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;",
+    );
+    const changed = structuredClone(f.policy);
+    changed.identities[0]!.wallets[0]!.enabled = false;
+    assert.throws(() => f.storage.auth.applyPolicy(changed));
+    assert.deepEqual(f.storage.auth.policy()?.policy, f.policy);
+    assert.equal(
+      control
+        .prepare('SELECT COUNT(*) AS n FROM nonces WHERE nonce = ?')
+        .get(pending.nonce)?.n,
+      1,
+    );
+    const logout = await f.app.inject({
+      method: 'POST',
+      url: '/v1/auth/logout',
+      headers: {
+        ...browser(session.cookie),
+        'x-csrf-token': session.csrfToken,
+      },
+    });
+    assert.equal(logout.statusCode, 503);
+    assert.equal(logout.headers['set-cookie'], undefined);
+    assert.equal(
+      (
+        await f.app.inject({
+          url: '/v1/auth/me',
+          headers: browser(session.cookie),
+        })
+      ).statusCode,
+      200,
+    );
+    control.exec('DROP TRIGGER reject_audit');
+    f.storage.auth.applyPolicy(changed);
+    assert.equal(
+      (
+        await f.app.inject({
+          url: '/v1/auth/me',
+          headers: browser(session.cookie),
+        })
+      ).statusCode,
+      401,
+    );
+  } finally {
+    control.close();
+  }
+});
+
+test('a database writer lock fails login closed without consuming its challenge', async (t) => {
+  const f = fixture(t);
+  const issued = await challenge(f);
+  const payload = {
+    nonce: issued.nonce,
+    message: issued.message,
+    signature: await f.eth.signMessage(issued.message),
+  };
+  const control = new DatabaseSync(f.path);
+  try {
+    control.exec('BEGIN IMMEDIATE');
+    const blocked = await f.app.inject({
+      method: 'POST',
+      url: '/v1/auth/verify',
+      headers: browser(issued.cookie),
+      payload,
+    });
+    assert.equal(blocked.statusCode, 503);
+    assert.equal(blocked.headers['set-cookie'], undefined);
+    assert.equal(
+      control
+        .prepare('SELECT consumed_at FROM nonces WHERE nonce = ?')
+        .get(issued.nonce)?.consumed_at,
+      null,
+    );
+    control.exec('ROLLBACK');
+    assert.equal(
+      (
+        await f.app.inject({
+          method: 'POST',
+          url: '/v1/auth/verify',
+          headers: browser(issued.cookie),
+          payload,
+        })
+      ).statusCode,
+      200,
+    );
+  } finally {
+    if (control.isTransaction) control.exec('ROLLBACK');
+    control.close();
+  }
 });

@@ -183,13 +183,50 @@ try {
       );
     assert.equal((await http('/private/', { cookie })).status, 302);
   }
+  compose(
+    'exec',
+    '-T',
+    'gateway',
+    'gozne',
+    'database',
+    'backup',
+    '/app/state/backup.sqlite',
+    '--json',
+  );
+  compose(
+    'exec',
+    '-T',
+    'gateway',
+    'gozne',
+    'database',
+    'restore',
+    '/app/state/backup.sqlite',
+    '/app/state/restored.sqlite',
+    '--json',
+  );
+  const restoredCommand = (...args) =>
+    JSON.parse(
+      compose(
+        'exec',
+        '-T',
+        '-e',
+        'GOZNE_DATABASE=/app/state/restored.sqlite',
+        'gateway',
+        'gozne',
+        ...args,
+        '--json',
+      ),
+    );
+  assert.equal(restoredCommand('doctor').status, 'ok');
+  assert.deepEqual(restoredCommand('session', 'list').sessions, []);
+  assert.equal(restoredCommand('policy', 'export').identities[0].id, 'tester');
   compose('stop', 'gateway');
   assert.ok(
     [500, 502, 503].includes((await http('/private/')).status),
     'proxy must fail closed when Gozne is unavailable',
   );
   console.log(
-    'HTTPS/Nginx verified: EVM + SIWS login, header sanitation, CLI revocation, logout and failure closure.',
+    'HTTPS/Nginx verified: EVM + SIWS login, header sanitation, CLI revocation, logout, backup/restore and failure closure.',
   );
 } catch (error) {
   // These are isolated synthetic services; request bodies and signatures are not logged.

@@ -35,10 +35,16 @@ autenticación se incorporó en la fase siguiente.
 
 ## Fase 3 — Seguridad y documentación
 
-- Completar matriz adversarial y pruebas de fallos de persistencia.
-- OpenAPI, quickstart, guía de proxy y recuperación.
-- SBOM, escaneo de imagen y artefactos reproducibles.
-- `SECURITY.md`, `CONTRIBUTING.md`, licencia y atribuciones.
+- [x] Fallos transaccionales de login, logout y política; bloqueo de SQLite.
+- [x] Copia en caliente y recuperación sin reactivar sesiones antiguas.
+- [x] OpenAPI, quickstart, guía de proxy y recuperación.
+- [x] Inventario CycloneDX y escaneo de imagen en CI.
+- [ ] Completar matriz adversarial, carga y fallos físicos de persistencia.
+- [ ] Reproducibilidad binaria y firma de artefactos de release.
+- [ ] Cerrar licencia y revisión de atribuciones; SECURITY y CONTRIBUTING ya
+      existen.
+
+**Estado:** endurecimiento en curso; aún no es un candidato estable.
 
 **Salida:** candidato `0.1.0-rc.1`.
 

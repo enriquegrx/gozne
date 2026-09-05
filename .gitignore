@@ -15,3 +15,5 @@ coverage/
 reports/
 examples/compose/tls/
 policy.local.json
+backups/
+examples/compose/*.local.yaml

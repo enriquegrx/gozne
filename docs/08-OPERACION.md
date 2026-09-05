@@ -108,8 +108,9 @@ TTL, incluyendo consumidos; 10.000 sesiones. Auditoría limitada a 50.000 evento
 y 30 días. SQLite contiene los mensajes de desafío, direcciones y permisos;
 protege el volumen. Los logs no contienen firmas, cookies, cuerpos, URLs ni IPs.
 
-La estrategia de backup/restauración y los ensayos de carga forman parte de la
-siguiente fase. No se soporta degradar a un binario con esquema anterior.
+La [guía de recuperación](09-RECUPERACION.md) describe copias en caliente y
+restauración a una base nueva. Los ensayos de carga siguen pendientes. No se
+soporta degradar a un binario con esquema anterior.
 
 ## Verificación
 

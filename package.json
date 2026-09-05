@@ -1,7 +1,7 @@
 {
   "name": "gozne",
-  "version": "0.1.0-dev.2",
-  "description": "Self-hosted wallet authentication gateway — Firma. Gira. Entra.",
+  "version": "0.1.0-dev.3",
+  "description": "Self-hosted wallet authentication gateway \u2014 Firma. Gira. Entra.",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",

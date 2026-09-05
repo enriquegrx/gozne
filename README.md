@@ -71,7 +71,7 @@ Phantom. WalletConnect, smart wallets y OIDC quedan para más adelante.
 - 🍪 Sesiones opacas de una hora, logout con CSRF y revocación por CLI.
 - 🚦 Identidades, wallets y roles explícitos por aplicación. Sin permiso, no
   pasas.
-- 🗃️ SQLite persistente, migraciones y auditoría de operaciones.
+- 🗃️ SQLite persistente, migraciones, auditoría y copias verificadas por CLI.
 - 🐳 Contenedores sin root, Nginx y pruebas del flujo completo por HTTPS.
 
 ## 🚀 Demo en Mac con OrbStack
@@ -156,6 +156,8 @@ esta ruta debe quedar fuera de la exposición pública.
 - [Contrato HTTP actual](openapi.yaml) y
   [Flujo de autenticación](docs/03-API-Y-CONTRATOS.md)
 - [Modelo de amenazas](docs/04-SEGURIDAD.md)
+- [Copias y recuperación](docs/09-RECUPERACION.md)
+- [Pruebas e informes de seguridad](docs/10-VERIFICACION.md)
 - [Roadmap](docs/06-ROADMAP.md)
 - [Decisiones técnicas](docs/07-DECISIONES.md)
 - [Cómo colaborar](CONTRIBUTING.md) · [Reportar una vulnerabilidad](SECURITY.md)

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.2
+  version: 0.1.0-dev.3
   description:
     Alpha EVM/SIWS. API y login requieren el mismo origen HTTPS. Sin política,
     autenticación devuelve 503.

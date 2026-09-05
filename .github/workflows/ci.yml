@@ -31,3 +31,17 @@ jobs:
           docker build -t gozne:dev .
           node scripts/smoke-container.mjs
           node scripts/test-proxy.mjs
+      - name: Generate dependency inventory
+        run: |
+          mkdir -p reports
+          npm sbom --omit=dev --sbom-format=cyclonedx > reports/dependencies.cdx.json
+      - name: Scan runtime image
+        run: sh scripts/scan-image.sh
+      - name: Upload dependency inventory and image findings
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: security-reports
+          path: reports/*.json
+          if-no-files-found: ignore
+          retention-days: 30
