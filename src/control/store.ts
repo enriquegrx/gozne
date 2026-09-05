@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { validatePolicy } from '../policy/policy.js';
-import type { Identity } from '../policy/policy.js';
+import type { Identity, Application } from '../policy/policy.js';
 import { AuthError } from '../auth/errors.js';
 import { AuthStore, digest } from '../auth/store.js';
 import {
@@ -179,6 +179,106 @@ export class ControlStore {
         .all(actor.application),
     };
   }
+  applications(raw: string, now: number) {
+    const actor = this.actor(raw, now);
+    const current = this.auth.policy()!;
+    const canManage =
+      actor.roles.includes('admin') &&
+      !!current.policy.applicationManagers?.includes(actor.identity);
+    return {
+      revision: current.digest,
+      canManage,
+      currentApplication: actor.application,
+      applications: current.policy.applications.filter(
+        (app) =>
+          canManage ||
+          this.auth.access(app.id, actor.network, actor.address, now)
+            ?.identity === actor.identity,
+      ),
+    };
+  }
+
+  saveApplication(
+    raw: string,
+    input: { revision: string; create: boolean; application: Application },
+    now: number,
+  ) {
+    const actor = this.actor(raw, now, true);
+    const current = this.auth.policy()!;
+    if (!current.policy.applicationManagers?.includes(actor.identity))
+      throw new AuthError(
+        403,
+        'APPLICATION_MANAGER_REQUIRED',
+        'Only an application manager can edit application definitions',
+      );
+    if (input.revision !== current.digest)
+      throw new AuthError(
+        409,
+        'POLICY_CONFLICT',
+        'Reload applications before saving',
+      );
+    const policy = structuredClone(current.policy);
+    const index = policy.applications.findIndex(
+      (app) => app.id === input.application.id,
+    );
+    if (input.create ? index !== -1 : index === -1)
+      throw new AuthError(
+        409,
+        'APPLICATION_CONFLICT',
+        'Application already exists or is unavailable',
+      );
+    if (!input.application.adminOrigin)
+      throw new AuthError(
+        400,
+        'ADMIN_ORIGIN_REQUIRED',
+        'Configure the private workspace origin',
+      );
+    if (
+      input.application.id === actor.application &&
+      input.application.adminOrigin !== actor.origin
+    )
+      throw new AuthError(
+        409,
+        'SELF_LOCKOUT',
+        'Change your active administration origin through the operator CLI',
+      );
+    if (input.create) {
+      policy.applications.push(input.application);
+      policy.identities.find(
+        (identity) => identity.id === actor.identity,
+      )!.grants[input.application.id] = [
+        ...new Set([...input.application.requiredRoles, 'admin']),
+      ];
+    } else policy.applications[index] = input.application;
+    if (
+      input.application.id === actor.application &&
+      !input.application.requiredRoles.every((role) =>
+        actor.roles.includes(role),
+      )
+    )
+      throw new AuthError(
+        409,
+        'SELF_LOCKOUT',
+        'Keep your current administrator authorized',
+      );
+    let validated;
+    try {
+      validated = validatePolicy(policy);
+    } catch {
+      throw new AuthError(
+        400,
+        'APPLICATION_INVALID',
+        'Invalid application definition, origin or policy limit',
+      );
+    }
+    const result = this.auth.applyPolicy(validated, input.revision, {
+      token: raw,
+      now,
+      applicationManager: true,
+    });
+    return { ...result, reauthenticationRequired: result.changed };
+  }
+
   directory(raw: string, now: number) {
     const actor = this.actor(raw, now, true);
     const current = this.auth.policy()!;
@@ -195,9 +295,12 @@ export class ControlStore {
           id: identity.id,
           wallets: identity.wallets,
           roles: identity.grants[actor.application]!,
-          walletsEditable: !Object.keys(identity.grants).some(
-            (app) => app !== actor.application,
-          ),
+          walletsEditable:
+            !Object.keys(identity.grants).some(
+              (app) => app !== actor.application,
+            ) &&
+            (!current.policy.applicationManagers?.includes(identity.id) ||
+              !!current.policy.applicationManagers?.includes(actor.identity)),
         })),
     };
   }
@@ -257,6 +360,16 @@ export class ControlStore {
         409,
         'SHARED_IDENTITY',
         'Wallets shared with another application must be managed through the operator CLI',
+      );
+    if (
+      policy.applicationManagers?.includes(identity.id) &&
+      !policy.applicationManagers.includes(actor.identity) &&
+      JSON.stringify(identity.wallets) !== JSON.stringify(wallets)
+    )
+      throw new AuthError(
+        403,
+        'APPLICATION_MANAGER_REQUIRED',
+        'Application manager wallets are operator-controlled',
       );
     identity.wallets = wallets;
     identity.grants[actor.application] = input.roles;

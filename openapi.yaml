@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.8
+  version: 0.1.0-dev.9
   description:
     Alpha EVM/SIWS authentication and signed simulation controls. API and login
     require the same HTTPS origin within each surface. Control paths exist only
@@ -1193,6 +1193,157 @@ paths:
           schema:
             type: string
             format: uuid
+  /v1/auth/control/applications:
+    get:
+      summary: List accessible applications and application-manager capability
+      description:
+        Private surface only. Managers can inspect all definitions; other
+        identities see only applications accessible to their current wallet.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDirectory'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create or update an application definition
+      description:
+        Requires a live admin session and operator-configured
+        applicationManagers membership. Rechecks permission inside the policy
+        transaction. New applications grant only their creator the required
+        roles and admin. Changes invalidate all sessions, invitations and
+        pending approvals. This does not provision DNS, certificates or proxy
+        routes.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdateResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationUpdate'
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Exact application HTTPS origin
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{64}$
   /v1/auth/control/users:
     get:
       summary: Read the application-scoped administrator user directory
@@ -1357,6 +1508,85 @@ components:
       name: __Host-gozne-session
       description: Secure; HttpOnly; SameSite=Strict; Path=/; no Domain
   schemas:
+    ApplicationDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - origin
+        - evmChainIds
+        - solanaChains
+        - requiredRoles
+      properties:
+        id: &id001
+          type: string
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+        origin:
+          type: string
+          format: uri
+        adminOrigin:
+          type: string
+          format: uri
+        evmChainIds:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 9007199254740991
+        solanaChains:
+          type: array
+          maxItems: 3
+          uniqueItems: true
+          items:
+            enum:
+              - solana:mainnet
+              - solana:devnet
+              - solana:testnet
+        requiredRoles:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: *id001
+    ApplicationDirectory:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - canManage
+        - currentApplication
+        - applications
+      properties:
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        canManage:
+          type: boolean
+        currentApplication: *id001
+        applications:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ApplicationDefinition'
+    ApplicationUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - create
+        - application
+      properties:
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        create:
+          type: boolean
+        application:
+          allOf:
+            - $ref: '#/components/schemas/ApplicationDefinition'
+            - required:
+                - adminOrigin
     Session:
       type: object
       additionalProperties: false

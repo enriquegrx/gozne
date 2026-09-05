@@ -59,6 +59,9 @@ request and approve their own action for a quick single-wallet test; this is
   immediate revocation, without rewriting the main policy.
 - ✍️ **Signed intent:** exact deployment parameters, fresh proof and one-time
   execution of a local simulation.
+- 🧭 **Multiple applications:** operator-controlled application creation and
+  configuration, with separate workspace sign-in. See the
+  [application guide](docs/13-APPLICATIONS.md).
 - 🖥️ **A responsive control panel:** permanent users, wallets, roles,
   invitations, requests and deployment receipts, active-session revocation and
   automatic updates. Built with local HTML, CSS and JavaScript, without a
@@ -129,6 +132,9 @@ Check the running demo at any time with `npm run build` followed by
 `DOCKER_CONTEXT=orbstack npm run deployment:check`. It checks service
 separation, public route denial and TLS expiry. See the
 [diagnostic options](docs/12-PRIVATE-ADMINISTRATION.md#check-a-running-deployment).
+
+The [QUIQUE.ES workspace example](examples/quique-app/README.md) demonstrates a
+separate protected application with its own interface and no wallet libraries.
 
 ## How the pieces fit
 

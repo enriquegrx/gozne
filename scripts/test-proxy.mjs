@@ -11,6 +11,11 @@ import { Wallet } from 'ethers';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { base58 } from '@scure/base';
 
+const quique = process.env.TEST_QUIQUE === '1';
+const application = quique ? 'quique' : 'demo';
+const composeFile = quique
+  ? 'examples/quique-app/compose.test.yaml'
+  : 'examples/compose/compose.yaml';
 const directory = mkdtempSync(join(tmpdir(), 'gozne-proxy-'));
 const project = `gozne-test-${randomUUID().slice(0, 8)}`;
 const listener = createServer();
@@ -35,7 +40,7 @@ const env = {
 const compose = (...args) =>
   execFileSync(
     'docker',
-    ['compose', '-p', project, '-f', 'examples/compose/compose.yaml', ...args],
+    ['compose', '-p', project, '-f', composeFile, ...args],
     { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   );
 const eth = Wallet.createRandom();
@@ -45,7 +50,7 @@ const policy = {
   version: 1,
   applications: [
     {
-      id: 'demo',
+      id: application,
       origin,
       adminOrigin,
       evmChainIds: [1],
@@ -60,7 +65,7 @@ const policy = {
         { network: 'evm', address: eth.address },
         { network: 'solana', address: solAddress },
       ],
-      grants: { demo: ['reader', 'admin'] },
+      grants: { [application]: ['reader', 'admin'] },
     },
   ],
 };
@@ -86,7 +91,7 @@ try {
       [
         'dist/cli/check-deployment.js',
         '--compose',
-        'examples/compose/compose.yaml',
+        composeFile,
         '--project',
         project,
         '--public-origin',
@@ -152,6 +157,7 @@ try {
   assert.doesNotMatch((await http('/')).text, /panel.js|Users &amp; wallets/);
   for (const path of [
     '/panel.js',
+    '/applications.js',
     '/admin.html',
     '/v1/auth/control',
     '/v1/auth/control/users',
@@ -172,7 +178,10 @@ try {
     ),
   );
 
-  assert.equal((await http('/v1/auth/validate?application=demo')).status, 404);
+  assert.equal(
+    (await http(`/v1/auth/validate?application=${application}`)).status,
+    404,
+  );
   assert.equal((await http('/private/')).status, 302);
   const cookieFrom = (response, name) => {
     const cookie = response.headers['set-cookie']?.find((entry) =>
@@ -187,7 +196,7 @@ try {
     const nonce = await http('/v1/auth/nonce', {
       internal: true,
       body: {
-        application: 'demo',
+        application,
         network: solana ? 'solana' : 'evm',
         address: solana ? solAddress : wallet.address,
         chainId: solana ? 'solana:devnet' : '1',
@@ -217,7 +226,7 @@ try {
   for (const network of ['evm', 'solana']) {
     const nonce = await http('/v1/auth/nonce', {
       body: {
-        application: 'demo',
+        application,
         network,
         address: network === 'evm' ? eth.address : solAddress,
         chainId: network === 'evm' ? '1' : 'solana:devnet',
@@ -247,10 +256,16 @@ try {
       },
     });
     assert.equal(inside.status, 200, inside.text);
-    const result = JSON.parse(inside.text);
-    assert.equal(result.headers['x-gozne-identity'], 'tester');
-    assert.equal(result.headers['x-gozne-role'], 'reader,admin');
-    assert.equal(result.headers['x-gozne-injected'], undefined);
+    if (quique) {
+      assert.match(inside.text, /Welcome, tester/);
+      assert.match(inside.text, /reader,admin/);
+      assert.doesNotMatch(inside.text, /attacker|forged/);
+    } else {
+      const result = JSON.parse(inside.text);
+      assert.equal(result.headers['x-gozne-identity'], 'tester');
+      assert.equal(result.headers['x-gozne-role'], 'reader,admin');
+      assert.equal(result.headers['x-gozne-injected'], undefined);
+    }
     const admin = await adminLogin(eth, network === 'solana');
     assert.equal(
       (await http('/v1/auth/me', { cookie: admin.cookie })).status,
@@ -282,7 +297,7 @@ try {
       assert.equal(invited.status, 200, invited.text);
       const guestNonce = await http('/v1/auth/nonce', {
         body: {
-          application: 'demo',
+          application,
           network: 'evm',
           address: guest.address,
           chainId: '1',
@@ -375,7 +390,7 @@ try {
       assert.equal((await http('/private/', { cookie })).status, 302);
       const nextNonce = await http('/v1/auth/nonce', {
         body: {
-          application: 'demo',
+          application,
           network: 'evm',
           address: eth.address,
           chainId: '1',

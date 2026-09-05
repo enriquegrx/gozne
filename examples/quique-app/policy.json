@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "applicationManagers": ["operator"],
+  "applications": [
+    {
+      "id": "quique",
+      "origin": "https://app.quique.orb.local",
+      "adminOrigin": "https://127.0.0.1:9543",
+      "evmChainIds": [1],
+      "solanaChains": ["solana:mainnet", "solana:devnet"],
+      "requiredRoles": ["reader"]
+    }
+  ],
+  "identities": [
+    {
+      "id": "operator",
+      "wallets": [],
+      "grants": {
+        "quique": ["reader", "admin"]
+      }
+    }
+  ]
+}

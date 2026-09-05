@@ -5,6 +5,14 @@ const status = document.querySelector('#status');
 const sessionPanel = document.querySelector('#session');
 const walletSelect = document.querySelector('#evm-wallet');
 const providers = new Map();
+const applicationInput = document.querySelector('#application-id');
+const defaultApplication =
+  document.querySelector('meta[name="gozne-application"]')?.content || 'demo';
+const requestedApplication = window.location
+  ? new URLSearchParams(window.location.search).get('application') ||
+    defaultApplication
+  : defaultApplication;
+applicationInput.value = requestedApplication;
 let csrfToken = null;
 let operationPending = false;
 
@@ -68,6 +76,8 @@ async function api(path, body, headers = {}) {
   return result;
 }
 function showSession(session) {
+  applicationInput.value = session.application || applicationInput.value;
+  applicationInput.readOnly = true;
   csrfToken = session.csrfToken;
   window.gozneSession = session;
   window.dispatchEvent(new window.Event('gozne:session'));
@@ -93,7 +103,8 @@ async function busy(operation) {
     buttons.forEach((button) => {
       button.disabled = previous.get(button);
     });
-    document.querySelector('#refresh-panel').disabled = !window.gozneSession;
+    const refreshButton = document.querySelector('#refresh-panel');
+    if (refreshButton) refreshButton.disabled = !window.gozneSession;
     operationPending = false;
   }
 }
@@ -110,7 +121,7 @@ document.querySelector('#evm').addEventListener('click', () =>
       await provider.request({ method: 'eth_chainId' }),
     ).toString();
     const challenge = await api('nonce', {
-      application: 'demo',
+      application: applicationInput.value.trim(),
       network: 'evm',
       address,
       chainId,
@@ -145,7 +156,7 @@ document.querySelector('#solana').addEventListener('click', () =>
     const address = connected.publicKey.toString();
     const chainId = document.querySelector('#solana-chain').value;
     const challenge = await api('nonce', {
-      application: 'demo',
+      application: applicationInput.value.trim(),
       network: 'solana',
       address,
       chainId,
@@ -168,11 +179,18 @@ document.querySelector('#logout').addEventListener('click', () =>
     window.gozneSession = null;
     window.dispatchEvent(new window.Event('gozne:session'));
     sessionPanel.hidden = true;
+    applicationInput.readOnly = false;
     status.textContent = 'Signed out.';
   }),
 );
 api('me')
-  .then(showSession)
+  .then(async (session) => {
+    if (session.application && session.application !== requestedApplication) {
+      await api('logout', {}, { 'X-CSRF-Token': session.csrfToken });
+      status.textContent =
+        'Application changed. Sign in to start a separate session.';
+    } else showSession(session);
+  })
   .catch(() => {
     /* No active session on first visit. */
   });

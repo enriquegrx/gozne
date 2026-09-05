@@ -792,3 +792,150 @@ test('unrelated application identities stay hidden and an unshared operator wall
   );
   assert.equal(f.storage.auth.policy()!.digest, view.revision);
 });
+
+test('application managers create applications and bootstrap only their own application grant', async (t) => {
+  const f = fixture(t);
+  const policy = structuredClone(f.storage.auth.policy()!.policy);
+  policy.applicationManagers = ['owner'];
+  f.storage.auth.applyPolicy(policy);
+  const owner = await f.login();
+  const application = {
+    id: 'portal',
+    origin: 'https://portal.example.test',
+    adminOrigin: origin,
+    requiredRoles: ['reader'],
+    evmChainIds: [1],
+    solanaChains: [],
+  };
+  const result = await f.post(owner, 'applications', {
+    revision: f.storage.auth.policy()!.digest,
+    create: true,
+    application,
+  });
+  assert.equal(result.statusCode, 200, result.body);
+  assert.equal(result.json().reauthenticationRequired, true);
+  assert.equal(f.storage.auth.session(owner.raw, Date.now()), null);
+  assert.deepEqual(
+    f.storage.auth.policy()!.policy.identities[0]!.grants.portal,
+    ['reader', 'admin'],
+  );
+  const portal = await f.login(undefined, 'portal');
+  assert.equal(portal.response.statusCode, 200);
+  const view = await f.app.inject({
+    url: '/v1/auth/control/applications',
+    headers: { cookie: `__Host-gozne-session=${portal.raw}`, origin },
+  });
+  assert.equal(view.json().canManage, true);
+  assert.ok(
+    view.json().applications.some((app: { id: string }) => app.id === 'portal'),
+  );
+  const stale = await f.post(portal, 'applications', {
+    revision: 'a'.repeat(64),
+    create: false,
+    application,
+  });
+  assert.equal(stale.statusCode, 409);
+  const locked = await f.post(portal, 'applications', {
+    revision: f.storage.auth.policy()!.digest,
+    create: false,
+    application: {
+      ...application,
+      adminOrigin: 'https://elsewhere.example.test',
+    },
+  });
+  assert.equal(locked.statusCode, 409);
+  assert.equal(locked.json().error.code, 'SELF_LOCKOUT');
+});
+
+test('ordinary administrators cannot create applications or take over a manager wallet', async (t) => {
+  const f = fixture(t);
+  const policy = structuredClone(f.storage.auth.policy()!.policy);
+  policy.applicationManagers = ['owner'];
+  delete policy.identities[0]!.grants.other;
+  policy.identities.push({
+    id: 'other-admin',
+    wallets: [{ network: 'evm', address: f.other.address, enabled: true }],
+    grants: { demo: ['reader', 'admin'] },
+  });
+  f.storage.auth.applyPolicy(policy);
+  const other = await f.login(f.other);
+  const revision = f.storage.auth.policy()!.digest;
+  const denied = await f.post(other, 'applications', {
+    revision,
+    create: true,
+    application: {
+      id: 'portal',
+      origin: 'https://portal.example.test',
+      adminOrigin: origin,
+      requiredRoles: ['reader'],
+      evmChainIds: [1],
+      solanaChains: [],
+    },
+  });
+  assert.equal(denied.statusCode, 403);
+  const view = await f.app.inject({
+    url: '/v1/auth/control/applications',
+    headers: { cookie: `__Host-gozne-session=${other.raw}`, origin },
+  });
+  assert.equal(view.json().canManage, false);
+  assert.deepEqual(
+    view.json().applications.map((app: { id: string }) => app.id),
+    ['demo'],
+  );
+  const takeover = await f.post(other, 'users', {
+    revision,
+    create: false,
+    id: 'owner',
+    wallets: [{ network: 'evm', address: f.guest.address, enabled: true }],
+    roles: ['reader', 'admin'],
+  });
+  assert.equal(takeover.statusCode, 403);
+  assert.equal(f.storage.auth.policy()!.digest, revision);
+});
+
+test('application writes validate origins and roll back completely if audit fails', async (t) => {
+  const f = fixture(t);
+  const policy = structuredClone(f.storage.auth.policy()!.policy);
+  policy.applicationManagers = ['owner'];
+  f.storage.auth.applyPolicy(policy);
+  const owner = await f.login();
+  const revision = f.storage.auth.policy()!.digest;
+  const application = {
+    id: 'portal',
+    origin: 'https://portal.example.test',
+    adminOrigin: origin,
+    requiredRoles: ['reader'],
+    evmChainIds: [1],
+    solanaChains: [],
+  };
+  assert.equal(
+    (
+      await f.post(owner, 'applications', {
+        revision,
+        create: true,
+        application: { ...application, origin: 'http://portal.example.test' },
+      })
+    ).statusCode,
+    400,
+  );
+  const db = new DatabaseSync(f.path);
+  db.exec(
+    "CREATE TRIGGER deny_app_audit BEFORE INSERT ON audit WHEN NEW.event='policy.applied' BEGIN SELECT RAISE(ABORT, 'test failure'); END",
+  );
+  try {
+    assert.equal(
+      (
+        await f.post(owner, 'applications', {
+          revision,
+          create: true,
+          application,
+        })
+      ).statusCode,
+      503,
+    );
+    assert.equal(f.storage.auth.policy()!.digest, revision);
+    assert.ok(f.storage.auth.session(owner.raw, Date.now()));
+  } finally {
+    db.close();
+  }
+});

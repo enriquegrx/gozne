@@ -1,4 +1,4 @@
-name: gozne-demo
+name: quique-workspace
 services:
   gateway:
     networks: [public-backend]
@@ -12,7 +12,7 @@ services:
     tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
     volumes:
       - state:/app/state
-      - ${DEMO_POLICY_FILE:-../policy.json}:/app/policy.json:ro
+      - ./policy.json:/app/policy.json:ro
     mem_limit: 256m
     pids_limit: 100
   demo-app:
@@ -23,14 +23,14 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     volumes:
-      - ../demo-app/server.mjs:/demo/server.mjs:ro
+      - ./server.mjs:/demo/server.mjs:ro
     healthcheck:
       test:
         [
           CMD,
           node,
           -e,
-          "fetch('http://127.0.0.1:8080').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 5s
       timeout: 3s
@@ -39,8 +39,9 @@ services:
     networks: [public-entry, public-backend]
     image: nginxinc/nginx-unprivileged:stable-alpine@sha256:9b87ad3dd9f431c733f19dfb278c7eb3dba9dca381942c79818bb42f1a566a83
     entrypoint: [nginx, -g, 'daemon off;']
-    ports:
-      - '127.0.0.1:${DEMO_PORT:-8443}:8443'
+    labels:
+      dev.orbstack.domains: app.quique.orb.local
+      dev.orbstack.http-port: '8080'
     depends_on:
       gateway:
         condition: service_healthy
@@ -51,13 +52,13 @@ services:
     security_opt: [no-new-privileges:true]
     tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
     volumes:
-      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../nginx/routes.conf:/etc/nginx/gozne-routes.conf:ro
-      - ../login/index.html:/usr/share/nginx/html/index.html:ro
+      - ../nginx/orbstack.conf:/etc/nginx/nginx.conf:ro
+      - ./routes.conf:/etc/nginx/gozne-routes.conf:ro
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./brand/symbol.png:/usr/share/nginx/html/brand/symbol.png:ro
+      - ./workspace.js:/usr/share/nginx/html/workspace.js:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
-      - ../login/style.css:/usr/share/nginx/html/style.css:ro
-      - ${DEMO_TLS_DIRECTORY:-./tls}/cert.pem:/etc/nginx/cert.pem:ro
-      - ${DEMO_TLS_DIRECTORY:-./tls}/key.pem:/etc/nginx/key.pem:ro
+      - ./style.css:/usr/share/nginx/html/style.css:ro
   admin-api:
     image: gozne:dev
     environment:
@@ -76,7 +77,7 @@ services:
     entrypoint: [nginx, -g, 'daemon off;']
     networks: [admin-entry, admin-backend]
     ports:
-      - '127.0.0.1:${DEMO_ADMIN_PORT:-9443}:8443'
+      - '127.0.0.1:${DEMO_ADMIN_PORT:-9543}:8443'
     depends_on:
       admin-api:
         condition: service_healthy
@@ -92,8 +93,8 @@ services:
       - ../login/panel.js:/usr/share/nginx/html/panel.js:ro
       - ../login/applications.js:/usr/share/nginx/html/applications.js:ro
       - ../login/style.css:/usr/share/nginx/html/style.css:ro
-      - ${DEMO_TLS_DIRECTORY:-./tls}/cert.pem:/etc/nginx/cert.pem:ro
-      - ${DEMO_TLS_DIRECTORY:-./tls}/key.pem:/etc/nginx/key.pem:ro
+      - ${DEMO_TLS_DIRECTORY:-../compose/tls}/cert.pem:/etc/nginx/cert.pem:ro
+      - ${DEMO_TLS_DIRECTORY:-../compose/tls}/key.pem:/etc/nginx/key.pem:ro
 networks:
   public-entry:
   public-backend:

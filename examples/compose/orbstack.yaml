@@ -89,6 +89,7 @@ services:
       - ../login/admin.html:/usr/share/nginx/html/admin.html:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ../login/panel.js:/usr/share/nginx/html/panel.js:ro
+      - ../login/applications.js:/usr/share/nginx/html/applications.js:ro
       - ../login/style.css:/usr/share/nginx/html/style.css:ro
       - ${DEMO_TLS_DIRECTORY:-./tls}/cert.pem:/etc/nginx/cert.pem:ro
       - ${DEMO_TLS_DIRECTORY:-./tls}/key.pem:/etc/nginx/key.pem:ro

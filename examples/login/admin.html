@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/style.css" />
     <script src="/login.js" defer></script>
     <script src="/panel.js" defer></script>
+    <script src="/applications.js" defer></script>
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
@@ -23,6 +24,7 @@
           ><span aria-hidden="true">▦</span> Overview</a
         ><a href="#actions"><span aria-hidden="true">↗</span> Signed actions</a
         ><a href="#invitations"><span aria-hidden="true">◇</span> Invitations</a
+        ><a href="#applications">Applications</a
         ><a href="#users"
           ><span aria-hidden="true">♙</span> Users &amp; wallets</a
         ><a href="#sessions"><span aria-hidden="true">◎</span> Sessions</a
@@ -185,6 +187,77 @@
                 </p>
               </div>
             </section>
+            <section class="card" id="applications">
+              <h2>Applications</h2>
+              <p class="muted">
+                Choose a workspace or configure an application.
+              </p>
+              <button
+                id="reload-applications"
+                type="button"
+                class="secondary"
+                disabled
+              >
+                Reload applications
+              </button>
+              <p id="applications-status" role="status">
+                Sign in to see your applications.
+              </p>
+              <div id="application-list"></div>
+              <form id="application-form">
+                <fieldset id="application-fields" disabled>
+                  <legend>Application configuration</legend>
+                  <label
+                    >Choose an application<select id="application-picker">
+                      <option value="">New application</option>
+                    </select></label
+                  >
+                  <label
+                    >ID<input
+                      id="app-id"
+                      required
+                      maxlength="64"
+                      pattern="[a-z][a-z0-9-]{0,63}"
+                  /></label>
+                  <label
+                    >Public HTTPS origin<input
+                      id="app-origin"
+                      type="url"
+                      required
+                      placeholder="https://portal.example.com"
+                  /></label>
+                  <label
+                    >Private HTTPS origin<input
+                      id="app-admin-origin"
+                      type="url"
+                      required
+                      placeholder="https://admin.internal.example.com"
+                  /></label>
+                  <label
+                    >Required roles, comma-separated<input
+                      id="app-roles"
+                      value="reader"
+                  /></label>
+                  <label
+                    >EVM chain IDs, comma-separated<input
+                      id="app-evm"
+                      value="1"
+                  /></label>
+                  <label
+                    >Solana chains, comma-separated<input
+                      id="app-solana"
+                      placeholder="solana:devnet"
+                  /></label>
+                  <p class="note">
+                    Saving invalidates all sessions, invitations and pending
+                    approvals. New applications grant their creator the required
+                    roles and admin access. DNS, TLS and proxy routes must be
+                    configured separately.
+                  </p>
+                  <button type="submit">Save application</button>
+                </fieldset>
+              </form>
+            </section>
             <section class="card" id="users">
               <div class="section-heading">
                 <div>
@@ -294,7 +367,13 @@
                 <span id="connection-state" class="tag">DISCONNECTED</span>
               </div>
               <p class="muted">Choose the extension you want to use.</p>
-              <label for="evm-wallet">EVM wallet</label
+              <label for="application-id">Application ID</label
+              ><input
+                id="application-id"
+                maxlength="64"
+                pattern="[a-z][a-z0-9-]{0,63}"
+                value="demo"
+              /><label for="evm-wallet">EVM wallet</label
               ><select id="evm-wallet" aria-describedby="evm-help">
                 <option value="">Choose a wallet</option>
                 <option id="wallet-rabby" value="io.rabby" disabled>

@@ -74,7 +74,11 @@ export class AuthStore {
   applyPolicy(
     value: unknown,
     expectedDigest?: string,
-    administrator?: { token: string; now: number },
+    administrator?: {
+      token: string;
+      now: number;
+      applicationManager?: boolean;
+    },
   ): { changed: boolean } {
     const policy = validatePolicy(value);
     const document = JSON.stringify(policy);
@@ -90,6 +94,16 @@ export class AuthStore {
           'A live administrator session is required',
         );
       const current = this.policy();
+      if (
+        administrator?.applicationManager &&
+        (!operator ||
+          !current?.policy.applicationManagers?.includes(operator.identity))
+      )
+        throw new AuthError(
+          403,
+          'APPLICATION_MANAGER_REQUIRED',
+          'An application manager is required',
+        );
       if (expectedDigest !== undefined && current?.digest !== expectedDigest)
         throw new AuthError(
           409,

@@ -3,18 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gozne · Sign in</title>
+    <title>quique.es · Private workspace</title>
+    <meta name="gozne-application" content="quique" />
     <link rel="stylesheet" href="/style.css" />
     <script src="/login.js" defer></script>
   </head>
   <body class="login-page">
     <main id="main" class="login-shell">
-      <a class="brand" href="/"><span class="brand-mark">g</span>gozne</a>
+      <a class="brand" href="/"
+        ><img
+          src="/brand/symbol.png"
+          alt=""
+          width="48"
+          height="48"
+        />quique.es</a
+      >
       <div class="page-heading">
         <div>
-          <p class="eyebrow">YOUR WALLET. YOUR ACCESS.</p>
-          <h1>Welcome back.</h1>
-          <p class="muted">Sign in to open your private application.</p>
+          <p class="eyebrow">PRIVATE WORKSPACE</p>
+          <h1>Your space.<br />Your access.</h1>
+          <p class="muted">Use your wallet to enter your personal workspace.</p>
         </div>
       </div>
       <section class="card wallet-card">
@@ -28,7 +36,7 @@
           id="application-id"
           maxlength="64"
           pattern="[a-z][a-z0-9-]{0,63}"
-          value="demo"
+          value="quique"
         /><label for="evm-wallet">EVM wallet</label
         ><select id="evm-wallet" aria-describedby="evm-help">
           <option value="">Choose a wallet</option>

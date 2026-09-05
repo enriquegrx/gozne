@@ -89,7 +89,9 @@ test('login and panel scripts coexist and render administrator actions without u
   };
   const context = createContext({
     document: page,
+    URLSearchParams,
     window: {
+      location: { origin: 'https://admin.example.test', search: '' },
       setTimeout: (callback: () => Promise<void>, delay: number) => {
         delays.push(delay);
         timers.push(callback);
@@ -99,7 +101,13 @@ test('login and panel scripts coexist and render administrator actions without u
       addEventListener: (
         name: string,
         handler: (event: { type: string; detail?: unknown }) => void,
-      ) => listeners.set(name, handler),
+      ) => {
+        const previous = listeners.get(name);
+        listeners.set(name, (event) => {
+          previous?.(event);
+          handler(event);
+        });
+      },
       dispatchEvent: (event: { type: string }) =>
         listeners.get(event.type)?.(event),
       Event: class {
@@ -117,6 +125,24 @@ test('login and panel scripts coexist and render administrator actions without u
         headers: options.headers,
       });
       let result: unknown = session;
+      if (url === '/v1/auth/control/applications')
+        result = options.body
+          ? { changed: true, reauthenticationRequired: true }
+          : {
+              revision: 'b'.repeat(64),
+              canManage: true,
+              currentApplication: 'demo',
+              applications: [
+                {
+                  id: 'demo',
+                  origin: 'https://public.example.test',
+                  adminOrigin: 'https://admin.example.test',
+                  requiredRoles: ['reader'],
+                  evmChainIds: [1],
+                  solanaChains: [],
+                },
+              ],
+            };
       if (url === '/v1/auth/control/users')
         result = options.body
           ? { changed: true, reauthenticationRequired: true }
@@ -170,7 +196,7 @@ test('login and panel scripts coexist and render administrator actions without u
       };
     },
   });
-  for (const file of ['login.js', 'panel.js'])
+  for (const file of ['login.js', 'panel.js', 'applications.js'])
     runInContext(
       readFileSync(
         new URL(`../../examples/login/${file}`, import.meta.url),
@@ -272,4 +298,35 @@ test('login and panel scripts coexist and render administrator actions without u
   assert.equal(save.headers['X-CSRF-Token'], 'csrf');
   assert.equal(select('#user-fields').disabled, true);
   assert.match(select('#status').textContent, /User saved/);
+  assert.equal(select('#application-fields').disabled, true);
+  await select('#evm').handlers.get('click')!();
+  await setImmediate();
+  assert.equal(select('#application-fields').disabled, false);
+  select('#app-id').value = 'portal';
+  select('#app-origin').value = 'https://portal.example.test';
+  select('#app-admin-origin').value = 'https://admin.example.test';
+  select('#app-roles').value = 'reader';
+  select('#app-evm').value = '1';
+  select('#app-solana').value = '';
+  select('#application-form').handlers.get('submit')!({ preventDefault() {} });
+  await setImmediate();
+  const applicationSave = requests.find(
+    (request) =>
+      request.url === '/v1/auth/control/applications' && request.body,
+  )!;
+  assert.deepEqual(applicationSave.body, {
+    revision: 'b'.repeat(64),
+    create: true,
+    application: {
+      id: 'portal',
+      origin: 'https://portal.example.test',
+      adminOrigin: 'https://admin.example.test',
+      requiredRoles: ['reader'],
+      evmChainIds: [1],
+      solanaChains: [],
+    },
+  });
+  assert.equal(applicationSave.headers['X-CSRF-Token'], 'csrf');
+  assert.equal(select('#application-fields').disabled, true);
+  assert.match(select('#status').textContent, /Application saved/);
 });

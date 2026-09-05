@@ -1,0 +1,236 @@
+:root {
+  color-scheme: light;
+  --paper: #f1ede4;
+  --surface: #fbf8f1;
+  --ink: #090b0b;
+  --amber: #ffad00;
+  --muted: #5d6360;
+  --line: rgba(9, 11, 11, 0.17);
+  font-family: Aptos, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 100px 100px;
+}
+a {
+  color: inherit;
+  text-underline-offset: 4px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.login-shell {
+  max-width: 540px;
+  margin: 6vh auto;
+  padding: 24px;
+}
+.brand img {
+  object-fit: contain;
+}
+.page-heading {
+  margin: 50px 0 30px;
+}
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #7a4d00;
+}
+h1 {
+  font-size: clamp(44px, 7vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+  margin: 18px 0 24px;
+}
+h2 {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+.muted,
+.note {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.card {
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--amber);
+}
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+.tag,
+.pill {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--line);
+  padding: 7px;
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 18px 0 8px;
+}
+input,
+select,
+button {
+  font: inherit;
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 0;
+}
+button {
+  margin: 10px 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover {
+  background: #353b37;
+}
+button.secondary {
+  background: transparent;
+  color: var(--ink);
+}
+button.text-button {
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  border: 0;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 3px;
+}
+.note {
+  font-size: 12px;
+}
+.or {
+  text-align: center;
+  border-top: 1px solid var(--line);
+  margin-top: 25px;
+  padding-top: 18px;
+  font-size: 12px;
+}
+#status {
+  font-size: 13px;
+  line-height: 1.5;
+}
+#session {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.app-link {
+  display: block;
+  font-weight: 700;
+  margin: 15px 0;
+}
+footer {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 35px;
+}
+[hidden] {
+  display: none !important;
+}
+.workspace {
+  max-width: 1100px;
+  margin: auto;
+  padding: 30px;
+}
+.workspace header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 25px;
+}
+.workspace header button {
+  width: auto;
+  padding: 9px 20px;
+}
+.workspace .hero {
+  padding: 65px 0 35px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 25px;
+}
+.facts {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 14px;
+  margin: 25px 0 0;
+}
+.facts dt {
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.resource {
+  display: block;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+}
+.resource small {
+  display: block;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.signal {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  background: #318258;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+@media (max-width: 650px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .workspace {
+    padding: 20px;
+  }
+  .facts {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .facts dd {
+    margin-bottom: 14px;
+  }
+  .card {
+    padding: 22px;
+  }
+}

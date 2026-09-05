@@ -17,6 +17,7 @@ export interface Identity {
   grants: Record<string, string[]>;
 }
 export interface Policy {
+  applicationManagers?: string[];
   version: 1;
   applications: Application[];
   identities: Identity[];
@@ -58,7 +59,12 @@ function roles(value: unknown): string[] {
 }
 
 export function validatePolicy(value: unknown): Policy {
-  const root = object(value, ['version', 'applications', 'identities']);
+  const root = object(value, [
+    'version',
+    'applications',
+    'identities',
+    'applicationManagers',
+  ]);
   if (root.version !== 1) throw new ConfigError('Unsupported policy version');
   const applications = list(root.applications, 100).map(
     (value): Application => {
@@ -196,7 +202,22 @@ export function validatePolicy(value: unknown): Policy {
     };
   });
   unique(identities.map((identity) => identity.id));
-  const policy: Policy = { version: 1, applications, identities };
+  const managers =
+    root.applicationManagers === undefined
+      ? undefined
+      : unique(list(root.applicationManagers, 100).map(identifier));
+  if (
+    managers?.some((id) => !identities.some((identity) => identity.id === id))
+  )
+    throw new ConfigError(
+      'Application managers must reference existing identities',
+    );
+  const policy: Policy = {
+    version: 1,
+    applications,
+    identities,
+    ...(managers === undefined ? {} : { applicationManagers: managers }),
+  };
   if (JSON.stringify(policy).length > 128 * 1024)
     throw new ConfigError('Policy is too large');
   return policy;

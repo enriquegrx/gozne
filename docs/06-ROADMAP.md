@@ -24,6 +24,17 @@
 This MVP records simulated deployment receipts. It does not execute a real
 deployment, require multiple approvers or provide cross-domain SSO.
 
+## Application integration and administration
+
+- [x] Private panel/API containers, separate session audiences and loopback demo
+      ingress.
+- [x] Permanent user, wallet and role management.
+- [x] Read-only deployment diagnostics and TLS expiry checks.
+- [x] Operator-controlled application definitions and workspace switching.
+- [x] Independent QUIQUE.ES workspace integration with full HTTPS tests.
+- [ ] Deploy the public/private origins on the target infrastructure and verify
+      external isolation.
+
 ## Before a stable release
 
 - [ ] Validate the Gozne name and choose a distribution license.

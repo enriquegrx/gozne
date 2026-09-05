@@ -17,3 +17,6 @@ examples/compose/tls/
 policy.local.json
 backups/
 examples/compose/*.local.yaml
+
+examples/quique-app/*.local.json
+examples/quique-app/*.local.env

@@ -268,8 +268,9 @@ The server chooses the application from the session, not from submitted JSON.
 The directory is deliberately loaded on sign-in or explicit reload, so
 background refresh does not overwrite an unsaved editor. It contains at most the
 policy's 1,000 identities, with at most 20 wallets and 20 roles per
-identity/application. Full policy export, application definitions and
-cross-application changes remain local CLI operations.
+identity/application. Full policy export and cross-application wallet changes
+remain local CLI operations. Application definitions are managed by explicitly
+authorized [application managers](13-APPLICATIONS.md).
 
 ### Deployment boundary
 

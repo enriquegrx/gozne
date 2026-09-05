@@ -154,6 +154,7 @@ for (const surface of ['public', 'admin'] as const) {
             ['/', 200],
             ['/admin.html', 404],
             ['/panel.js', 404],
+            ['/applications.js', 404],
             ['/v1/auth/control', 404],
             ['/v1/auth/control/users', 404],
           ]
@@ -161,6 +162,7 @@ for (const surface of ['public', 'admin'] as const) {
             ['/healthz', 200],
             ['/', 200],
             ['/panel.js', 200],
+            ['/applications.js', 200],
             ['/v1/auth/control/users', 401],
           ];
     for (const [path, expected] of paths) {

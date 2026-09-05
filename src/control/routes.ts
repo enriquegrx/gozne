@@ -54,6 +54,61 @@ export async function controlRoutes(
         'A valid CSRF token is required',
       );
   });
+  app.get('/v1/auth/control/applications', async (request) =>
+    store.applications(request.cookies[SESSION_COOKIE]!, now()),
+  );
+  app.post<{
+    Body: {
+      revision: string;
+      create: boolean;
+      application: import('../policy/policy.js').Application;
+    };
+  }>(
+    '/v1/auth/control/applications',
+    {
+      schema: {
+        body: object({
+          revision: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+          create: { type: 'boolean' },
+          application: object({
+            id: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
+            origin: { type: 'string', maxLength: 256 },
+            adminOrigin: { type: 'string', maxLength: 256 },
+            evmChainIds: {
+              type: 'array',
+              maxItems: 20,
+              uniqueItems: true,
+              items: {
+                type: 'integer',
+                minimum: 1,
+                maximum: Number.MAX_SAFE_INTEGER,
+              },
+            },
+            solanaChains: {
+              type: 'array',
+              maxItems: 3,
+              uniqueItems: true,
+              items: {
+                enum: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+              },
+            },
+            requiredRoles: {
+              type: 'array',
+              maxItems: 20,
+              uniqueItems: true,
+              items: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
+            },
+          }),
+        }),
+      },
+    },
+    async (request) =>
+      store.saveApplication(
+        request.cookies[SESSION_COOKIE]!,
+        request.body,
+        now(),
+      ),
+  );
   app.get('/v1/auth/control/users', async (request) =>
     store.directory(request.cookies[SESSION_COOKIE]!, now()),
   );

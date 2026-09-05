@@ -249,7 +249,7 @@
       : false;
     select('#user-wallet-help').textContent =
       user && !user.walletsEditable
-        ? 'These wallets are shared with another application. Only application roles can be edited here; use the operator CLI for shared wallets.'
+        ? 'These wallets are shared across applications or belong to an application manager. Only application roles can be edited here; use the operator CLI for wallet changes.'
         : 'Add, disable or remove public wallets. Never enter private keys or seed phrases.';
   }
   async function loadUsers() {
@@ -329,6 +329,7 @@
     }, retryDelay);
   }
   function signedOut() {
+    select('#application-id').readOnly = false;
     currentSession = null;
     directory = null;
     select('#user-fields').disabled = true;

@@ -1,4 +1,4 @@
-name: gozne-demo
+name: quique-workspace-test
 services:
   gateway:
     networks: [public-backend]
@@ -23,14 +23,14 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     volumes:
-      - ../demo-app/server.mjs:/demo/server.mjs:ro
+      - ./server.mjs:/demo/server.mjs:ro
     healthcheck:
       test:
         [
           CMD,
           node,
           -e,
-          "fetch('http://127.0.0.1:8080').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 5s
       timeout: 3s
@@ -52,10 +52,12 @@ services:
     tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
     volumes:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../nginx/routes.conf:/etc/nginx/gozne-routes.conf:ro
-      - ../login/index.html:/usr/share/nginx/html/index.html:ro
+      - ./routes.conf:/etc/nginx/gozne-routes.conf:ro
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./brand/symbol.png:/usr/share/nginx/html/brand/symbol.png:ro
+      - ./workspace.js:/usr/share/nginx/html/workspace.js:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
-      - ../login/style.css:/usr/share/nginx/html/style.css:ro
+      - ./style.css:/usr/share/nginx/html/style.css:ro
       - ${DEMO_TLS_DIRECTORY:-./tls}/cert.pem:/etc/nginx/cert.pem:ro
       - ${DEMO_TLS_DIRECTORY:-./tls}/key.pem:/etc/nginx/key.pem:ro
   admin-api:
