@@ -23,6 +23,7 @@
           ><span aria-hidden="true">▦</span> Overview</a
         ><a href="#actions"><span aria-hidden="true">↗</span> Signed actions</a
         ><a href="#invitations"><span aria-hidden="true">◇</span> Invitations</a
+        ><a href="#sessions"><span aria-hidden="true">◎</span> Sessions</a
         ><a href="#activity"><span aria-hidden="true">◷</span> Deployments</a>
       </nav>
       <div class="sidebar-bottom">
@@ -51,6 +52,14 @@
           <button id="refresh-panel" class="secondary" type="button" disabled>
             ↻ Refresh
           </button>
+        </div>
+        <div class="sync-bar">
+          <label
+            ><input id="auto-refresh" type="checkbox" checked /> Auto-refresh
+            every 30 seconds</label
+          ><span id="sync-status" role="status"
+            >Sign in to sync your workspace</span
+          >
         </div>
         <div class="metrics" aria-label="Workspace summary">
           <article>
@@ -171,6 +180,23 @@
               <div id="invitation-list" class="record-list">
                 <p class="empty">
                   Administrator sign-in required to manage invitations.
+                </p>
+              </div>
+            </section>
+            <section class="card" id="sessions">
+              <div class="section-heading">
+                <div>
+                  <h2>Active sessions</h2>
+                  <p class="muted">
+                    Close access immediately. A revoked signer also invalidates
+                    their pending approvals.
+                  </p>
+                </div>
+                <span class="tag">ADMIN</span>
+              </div>
+              <div id="session-list">
+                <p class="empty">
+                  Sign in as an administrator to manage sessions.
                 </p>
               </div>
             </section>

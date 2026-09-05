@@ -8,6 +8,8 @@
     value.length > 24 ? `${value.slice(0, 12)}…${value.slice(-8)}` : value;
   let currentSession = null;
   let refreshVersion = 0;
+  let pollTimer;
+  let retryDelay = 30000;
   function element(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -115,19 +117,16 @@
       );
       record.append(details);
       const controls = element('div', undefined, 'record-actions');
-      if (action.status === 'pending' && currentSession.roles.includes('admin'))
+      if (action.permissions.approve)
         controls.append(button('Sign approval', () => approve(action.id)));
       // Execution remains tied to the original session; the server enforces this even for the same identity.
-      if (
-        action.status === 'approved' &&
-        action.requester === currentSession.identity
-      )
+      if (action.permissions.execute)
         controls.append(
           button('Execute simulation once', () =>
             mutate(`actions/${action.id}/execute`),
           ),
         );
-      if (['pending', 'approved'].includes(action.status))
+      if (action.permissions.cancel)
         controls.append(
           button('Cancel request', () => mutate(`actions/${action.id}/cancel`)),
         );
@@ -201,6 +200,52 @@
       list.append(row);
     }
   }
+  function renderSessions(sessions) {
+    const list = select('#session-list');
+    list.replaceChildren();
+    if (!currentSession.roles.includes('admin'))
+      return empty(list, 'Only administrators can manage active sessions.');
+    if (!sessions.length) return empty(list, 'No active sessions.');
+    for (const session of sessions) {
+      const row = element('article', undefined, 'record');
+      const head = element('div', undefined, 'record-head');
+      head.append(
+        element('h3', short(session.identity)),
+        element(
+          'span',
+          session.id === currentSession.id
+            ? 'This session'
+            : session.network.toUpperCase(),
+          'badge',
+        ),
+      );
+      row.append(
+        head,
+        element('p', session.address),
+        element(
+          'p',
+          `Started ${date(session.createdAt)} · Expires ${date(session.expiresAt)}`,
+        ),
+      );
+      if (session.id !== currentSession.id)
+        row.append(
+          button('Revoke session', () =>
+            mutate(`sessions/${session.id}/revoke`),
+          ),
+        );
+      list.append(row);
+    }
+  }
+  function scheduleRefresh() {
+    window.clearTimeout(pollTimer);
+    if (!window.gozneSession || !select('#auto-refresh').checked) return;
+    pollTimer = window.setTimeout(async () => {
+      if (!document.hidden && !window.gozne.isBusy()) {
+        await refresh().catch(handleRefreshError);
+      }
+      scheduleRefresh();
+    }, retryDelay);
+  }
   function signedOut() {
     currentSession = null;
     select('#action-fields').disabled = true;
@@ -220,14 +265,27 @@
       'Administrator sign-in required to manage invitations.',
     );
     empty(select('#deployment-list'), 'No receipts loaded.');
+    empty(
+      select('#session-list'),
+      'Sign in as an administrator to manage sessions.',
+    );
   }
   async function refresh() {
     const version = ++refreshVersion;
     if (!window.gozneSession) return signedOut();
-    const session = await api('me');
-    const data = await api('control');
+    let session, data;
+    try {
+      session = await api('me');
+      data = await api('control');
+    } catch (error) {
+      if (version !== refreshVersion || !window.gozneSession) return;
+      throw error;
+    }
     if (version !== refreshVersion || !window.gozneSession) return;
     currentSession = session;
+    retryDelay = 30000;
+    select('#sync-status').textContent =
+      `Updated ${new Date().toLocaleTimeString()}`;
     select('#action-fields').disabled = false;
     select('#invite-fields').disabled = !session.roles.includes('admin');
     select('#refresh-panel').disabled = false;
@@ -250,16 +308,31 @@
     renderActions(data.actions);
     renderInvitations(data.invitations);
     renderDeployments(data.deployments);
+    renderSessions(data.sessions);
   }
   function handleRefreshError(error) {
+    if (error.status === 401) {
+      window.gozneSession = null;
+      select('#session').hidden = true;
+      window.clearTimeout(pollTimer);
+    }
+    retryDelay = Math.min(retryDelay * 2, 120000);
     signedOut();
+    select('#refresh-panel').disabled = !window.gozneSession;
+    select('#sync-status').textContent =
+      error.status === 401
+        ? 'Session ended'
+        : 'Connection interrupted; retrying';
     select('#status').textContent =
       `Could not load the workspace: ${error.message} Refresh or sign in again.`;
   }
   window.addEventListener('gozne:session', () => {
-    refresh().catch(handleRefreshError);
+    refresh().catch(handleRefreshError).finally(scheduleRefresh);
   });
-  select('#refresh-panel').addEventListener('click', () => busy(refresh));
+  select('#refresh-panel').addEventListener('click', () =>
+    busy(() => refresh().catch(handleRefreshError).finally(scheduleRefresh)),
+  );
+  select('#auto-refresh').addEventListener('change', scheduleRefresh);
   select('#action-form').addEventListener('submit', (event) => {
     event.preventDefault();
     busy(async () => {
@@ -293,5 +366,5 @@
         'Invitation created. Only that wallet can use it; the link carries no access token.';
     });
   });
-  refresh().catch(handleRefreshError);
+  refresh().catch(handleRefreshError).finally(scheduleRefresh);
 })();

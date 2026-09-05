@@ -138,7 +138,10 @@ Action, invitation and receipt history is retained in SQLite without automatic
 archival. Monitor volume growth. The overview returns at most 100 recent
 actions, 100 invitations, 100 sessions and 20 receipts. Dashboard counters
 reflect these returned windows, not lifetime totals. There is no pagination or
-push update; use Refresh after another browser makes a change.
+server push. Visible signed-in panels poll every 30 seconds by default (four
+requests/minute for session and overview checks), with backoff on errors.
+Disable auto-refresh when many users share a constrained proxy quota. Manual
+Refresh remains available.
 
 SQLite contains addresses, policy, challenge messages and operation metadata.
 Protect the volume and backups. Request logs omit signatures, cookies, bodies,

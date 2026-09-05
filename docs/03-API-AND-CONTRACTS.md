@@ -101,6 +101,11 @@ must deny access on any failed validation. Nginx may translate an unexpected
 `auth_request` status to `500`, which still denies the protected response. Keep
 `validate` internal; the example proxy returns `404` to public requests.
 
+Session management also provides `POST /v1/auth/control/sessions/{id}/revoke`
+for an administrator to revoke another session in the current application. It
+requires an empty JSON body, Origin and CSRF. The current session must use
+logout.
+
 ## Errors
 
 ```json

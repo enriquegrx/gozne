@@ -10,6 +10,7 @@ test('login and panel scripts coexist and render administrator actions without u
     value = '';
     disabled = false;
     hidden = false;
+    checked = true;
     type = '';
     className = '';
     href = '';
@@ -67,18 +68,30 @@ test('login and panel scripts coexist and render administrator actions without u
     headers: Record<string, string>;
   }[] = [];
   const walletCalls: string[] = [];
-  const context = createContext({
-    document: {
-      querySelector: select,
-      querySelectorAll: () => [],
-      createElement: () => new Element(),
-      createTextNode: (text: string) => {
-        const node = new Element();
-        node.textContent = text;
-        return node;
-      },
+  const timers: (() => Promise<void>)[] = [];
+  let revoked = false;
+  let unavailable = false;
+  const delays: number[] = [];
+  const page = {
+    hidden: false,
+    querySelector: select,
+    querySelectorAll: () => [],
+    createElement: () => new Element(),
+    createTextNode: (text: string) => {
+      const node = new Element();
+      node.textContent = text;
+      return node;
     },
+  };
+  const context = createContext({
+    document: page,
     window: {
+      setTimeout: (callback: () => Promise<void>, delay: number) => {
+        delays.push(delay);
+        timers.push(callback);
+        return timers.length;
+      },
+      clearTimeout: () => {},
       addEventListener: (
         name: string,
         handler: (event: { type: string; detail?: unknown }) => void,
@@ -102,7 +115,16 @@ test('login and panel scripts coexist and render administrator actions without u
       let result: unknown = session;
       if (url === '/v1/auth/control')
         result = {
-          actions: [action],
+          actions: [
+            {
+              ...action,
+              permissions: {
+                approve: action.status === 'pending',
+                execute: action.status === 'approved',
+                cancel: ['pending', 'approved'].includes(action.status),
+              },
+            },
+          ],
           invitations: [],
           sessions: [],
           deployments: [],
@@ -121,7 +143,16 @@ test('login and panel scripts coexist and render administrator actions without u
         action.status = 'executed';
         result = { action, receipt: { simulated: true } };
       }
-      return { ok: true, json: async () => result };
+      return {
+        ok: !((revoked || unavailable) && url.endsWith('/me')),
+        status:
+          revoked && url.endsWith('/me')
+            ? 401
+            : unavailable && url.endsWith('/me')
+              ? 503
+              : 200,
+        json: async () => result,
+      };
     },
   });
   for (const file of ['login.js', 'panel.js'])
@@ -187,8 +218,22 @@ test('login and panel scripts coexist and render administrator actions without u
     select('#action-list').children[0]!.children.at(-1)!.children.length,
     0,
   );
-  await select('#logout').handlers.get('click')!();
-  await setImmediate();
+  const before = requests.length;
+  page.hidden = true;
+  await timers.at(-1)!();
+  assert.equal(requests.length, before, 'hidden tabs must not poll');
+  page.hidden = false;
+  unavailable = true;
+  await timers.at(-1)!();
+  assert.equal(delays.at(-1), 60000);
+  await timers.at(-1)!();
+  assert.equal(delays.at(-1), 120000);
+  unavailable = false;
+  await timers.at(-1)!();
+  assert.equal(delays.at(-1), 30000);
+  revoked = true;
+  await timers.at(-1)!();
+  assert.equal(select('#sync-status').textContent, 'Session ended');
   assert.equal(select('#connection-state').textContent, 'DISCONNECTED');
   assert.equal(select('#invite-fields').disabled, true);
   assert.equal(select('#action-fields').disabled, true);

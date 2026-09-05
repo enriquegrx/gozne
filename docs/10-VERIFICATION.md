@@ -36,6 +36,12 @@ in and requesting an action, the owner signing, one-time execution and
 invitation revocation. It uses isolated Compose resources and removes only those
 resources.
 
+Panel tests also exercise session-scoped action controls, automatic refresh,
+hidden-tab suppression, retry backoff and clearing an invalid session. Session
+revocation tests cover cross-application isolation, CSRF, administrator roles
+and audit-write rollback. HTTPS integration also revokes a guest session through
+the control API and checks that the proxy denies its next request.
+
 ## Crash, full storage and concurrency
 
 `test-resilience.mjs` requires a built `gozne:dev` image and installed npm

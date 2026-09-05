@@ -183,11 +183,38 @@ action/invitation tables provide operation details. Full signatures are not
 retained as portable verification receipts. A deployment receipt is operational
 evidence in the trusted database, not a standalone cryptographic certificate.
 
-The dashboard uses explicit Refresh and bounded recent lists. Counters describe
-loaded records, not lifetime totals. History has no automatic archival yet. See
-[operational limits](08-OPERATIONS.md#current-limits).
+The dashboard supports automatic updates and bounded recent lists. Counters
+describe loaded records, not lifetime totals. History has no automatic archival
+yet. See [operational limits](08-OPERATIONS.md#current-limits).
 
 Restoration invalidates every invitation and pending approval. See
 [recovery](09-RECOVERY.md). Multi-person approval, scoped agent delegation,
 passkeys, OIDC and real deployment adapters remain on the
 [roadmap](06-ROADMAP.md).
+
+## Active sessions and automatic updates
+
+Administrators can inspect up to 100 active sessions for the current
+application, including the identity, network, public address and session
+deadlines. **Revoke session** immediately closes that session's authority,
+including outstanding approvals signed by it. The current session is labeled
+**This session**; use **Sign out** to close it. Revoking a guest session does
+not revoke the invitation: that wallet can sign in again until its invitation is
+revoked or expires.
+
+`POST /v1/auth/control/sessions/{id}/revoke` accepts `{}` and requires the same
+session, Origin and CSRF protections as other mutations. Only administrators can
+revoke another session in their application. Missing, expired, already-revoked
+or foreign-application sessions return `404`; the caller's own session returns
+`409 USE_LOGOUT`. Revocation and the administrator audit event share one commit.
+
+Each overview action includes `permissions.approve`, `permissions.execute` and
+`permissions.cancel`. These describe the current session's available controls;
+execution authority is never inferred from matching identity names. The server
+still revalidates every mutation.
+
+Auto-refresh runs every 30 seconds while signed in, enabled and visible. It
+skips wallet interactions and other pending operations. Turn it off with the
+checkbox or refresh manually. Failed background requests back off to 60 and then
+120 seconds; a successful refresh resets the interval. An invalid session clears
+the workspace and stops polling. The panel does not extend a session's lifetime.

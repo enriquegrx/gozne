@@ -60,8 +60,8 @@ request and approve their own action for a quick single-wallet test; this is
 - ✍️ **Signed intent:** exact deployment parameters, fresh proof and one-time
   execution of a local simulation.
 - 🖥️ **A responsive control panel:** invitations, requests and deployment
-  receipts, built with local HTML, CSS and JavaScript. No frontend framework or
-  CDN.
+  receipts, active-session revocation and automatic updates. Built with local
+  HTML, CSS and JavaScript, without a frontend framework or CDN.
 - 🗃️ **SQLite and a CLI:** transactional migrations, policy administration,
   audit export, live backups and recovery.
 - 🐳 **A complete local setup:** non-root containers, Nginx and HTTPS on

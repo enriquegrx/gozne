@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.4
+  version: 0.1.0-dev.5
   description:
     Alpha EVM/SIWS authentication and signed simulation controls. API and login
     require the same HTTPS origin. Authentication returns 503 without a policy.
@@ -1097,6 +1097,100 @@ paths:
           name: id
           required: true
           schema: *id003
+  /v1/auth/control/sessions/{id}/revoke:
+    post:
+      summary: Revoke another active session in the current application
+      description:
+        Administrator only. Cross-application or inactive targets return 404.
+        The current session returns 409 USE_LOGOUT. Revocation and audit commit
+        atomically and invalidate approvals bound to that session.
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid session or proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Role, origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operation not found in this application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description:
+            Operation unavailable, already consumed, expired or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate or pending-state limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Exact application HTTPS origin
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{64}$
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
 components:
   securitySchemes:
     LoginContext:
@@ -1377,11 +1471,20 @@ components:
           type: integer
         expiresAt:
           type: integer
+        network:
+          type: string
+          enum:
+            - evm
+            - solana
+        address:
+          type: string
       required:
         - id
         - identity
         - createdAt
         - expiresAt
+        - network
+        - address
     ControlOverview:
       type: object
       additionalProperties: false
@@ -1389,7 +1492,7 @@ components:
         actions:
           type: array
           items:
-            $ref: '#/components/schemas/Action'
+            $ref: '#/components/schemas/ControlAction'
         invitations:
           type: array
           items:
@@ -1434,3 +1537,75 @@ components:
           const: true
       required:
         - ok
+    ControlAction:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        application:
+          type: string
+        requester:
+          type: string
+        payload:
+          $ref: '#/components/schemas/DeploymentPayload'
+        payloadHash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        createdAt:
+          type: integer
+        expiresAt:
+          type: integer
+        status:
+          type: string
+          enum:
+            - pending
+            - approved
+            - executed
+            - canceled
+            - expired
+        approvedBy:
+          type:
+            - string
+            - 'null'
+        approvedAt:
+          type:
+            - integer
+            - 'null'
+        approvalExpiresAt:
+          type:
+            - integer
+            - 'null'
+        executedAt:
+          type:
+            - integer
+            - 'null'
+        permissions:
+          type: object
+          additionalProperties: false
+          properties:
+            approve:
+              type: boolean
+            execute:
+              type: boolean
+            cancel:
+              type: boolean
+          required:
+            - approve
+            - execute
+            - cancel
+      required:
+        - id
+        - application
+        - requester
+        - payload
+        - payloadHash
+        - createdAt
+        - expiresAt
+        - status
+        - approvedBy
+        - approvedAt
+        - approvalExpiresAt
+        - executedAt
+        - permissions

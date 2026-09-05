@@ -232,6 +232,14 @@ try {
       assert.equal((await execute()).status, 200);
       assert.equal((await execute()).status, 409);
       assert.equal(
+        (await control(`sessions/${guestSession.id}/revoke`)).status,
+        200,
+      );
+      assert.equal(
+        (await http('/private/', { cookie: guestCookie })).status,
+        302,
+      );
+      assert.equal(
         (await control(`invitations/${JSON.parse(invited.text).id}/revoke`))
           .status,
         200,

@@ -133,9 +133,20 @@ export class ControlStore {
       )
       .all(...(admin ? [actor.application] : [actor.application, digest(raw)]));
     return {
-      actions: rows.map((row) =>
-        this.publicAction(row as unknown as Action, now),
-      ),
+      actions: rows.map((row) => {
+        const action = row as unknown as Action;
+        const result = this.publicAction(action, now);
+        const own = action.requester_token_hash === digest(raw);
+        return {
+          ...result,
+          permissions: {
+            approve: admin && result.status === 'pending',
+            execute: own && result.status === 'approved',
+            cancel:
+              (own || admin) && ['pending', 'approved'].includes(result.status),
+          },
+        };
+      }),
       invitations: admin
         ? this.db
             .prepare(
@@ -146,7 +157,7 @@ export class ControlStore {
       sessions: admin
         ? this.db
             .prepare(
-              'SELECT id, identity, created_at AS createdAt, expires_at AS expiresAt FROM sessions WHERE application = ? AND revoked_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 100',
+              'SELECT id, identity, network, address, created_at AS createdAt, expires_at AS expiresAt FROM sessions WHERE application = ? AND revoked_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 100',
             )
             .all(actor.application, now)
             .filter((row) => {
@@ -166,6 +177,34 @@ export class ControlStore {
         .all(actor.application),
     };
   }
+  revokeSession(raw: string, id: string, now: number) {
+    return this.transaction(() => {
+      const actor = this.actor(raw, now, true);
+      if (id === actor.id)
+        throw new AuthError(
+          409,
+          'USE_LOGOUT',
+          'Use sign out to close your current session',
+        );
+      const target = this.db
+        .prepare(
+          'SELECT token_hash, identity FROM sessions WHERE id = ? AND application = ?',
+        )
+        .get(id, actor.application);
+      if (!target || !this.auth.sessionByHash(String(target.token_hash), now))
+        throw new AuthError(
+          404,
+          'SESSION_NOT_FOUND',
+          'Active session not found',
+        );
+      this.db
+        .prepare('UPDATE sessions SET revoked_at = ? WHERE id = ?')
+        .run(now, id);
+      this.audit('session.revoked-by-admin', actor.identity, actor.id, now);
+      return { ok: true };
+    });
+  }
+
   invite(
     raw: string,
     network: Network,

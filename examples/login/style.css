@@ -727,3 +727,24 @@ summary {
     align-items: flex-start;
   }
 }
+
+.sync-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -8px 0 24px;
+  color: #6c756f;
+  font-size: 11px;
+}
+.sync-bar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sync-bar input {
+  width: 14px;
+  min-height: 14px;
+  margin: 0;
+  accent-color: #275c49;
+}

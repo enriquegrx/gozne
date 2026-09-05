@@ -56,6 +56,16 @@ export async function controlRoutes(
   app.get('/v1/auth/control', async (request) =>
     store.overview(request.cookies[SESSION_COOKIE]!, now()),
   );
+  app.post<{ Params: { id: string } }>(
+    '/v1/auth/control/sessions/:id/revoke',
+    { schema: { params, body: empty } },
+    async (request) =>
+      store.revokeSession(
+        request.cookies[SESSION_COOKIE]!,
+        request.params.id,
+        now(),
+      ),
+  );
   app.post<{
     Body: { network: 'evm' | 'solana'; address: string; minutes: number };
   }>(

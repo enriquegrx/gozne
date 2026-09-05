@@ -486,3 +486,81 @@ test('invitation expiry denies the old session and renewal never revives it', as
     401,
   );
 });
+
+test('administrators revoke sessions within their application, with CSRF and atomic audit', async (t) => {
+  const f = fixture(t);
+  const owner = await f.login();
+  await f.invite(owner);
+  const guest = await f.login(f.guest);
+  const guestId = guest.response.json<{ id: string }>().id;
+  const ownerId = owner.response.json<{ id: string }>().id;
+  const other = await f.login(f.owner, 'other');
+  const otherId = other.response.json<{ id: string }>().id;
+  assert.equal(
+    (await f.post(guest, `sessions/${ownerId}/revoke`)).statusCode,
+    403,
+  );
+  assert.equal(
+    (
+      await f.post(
+        owner,
+        `sessions/${guestId}/revoke`,
+        {},
+        { 'x-csrf-token': 'invalid' },
+      )
+    ).statusCode,
+    403,
+  );
+  assert.equal(
+    (await f.post(owner, `sessions/${otherId}/revoke`)).statusCode,
+    404,
+  );
+  assert.equal(
+    (await f.post(owner, `sessions/${ownerId}/revoke`)).statusCode,
+    409,
+  );
+  const db = new DatabaseSync(f.path);
+  db.exec(
+    "CREATE TRIGGER deny_session_audit BEFORE INSERT ON audit WHEN NEW.event = 'session.revoked-by-admin' BEGIN SELECT RAISE(ABORT, 'synthetic'); END",
+  );
+  assert.equal(
+    (await f.post(owner, `sessions/${guestId}/revoke`)).statusCode,
+    503,
+  );
+  assert.ok(f.storage.auth.session(guest.raw, Date.now()));
+  db.exec('DROP TRIGGER deny_session_audit');
+  db.close();
+  assert.equal(
+    (await f.post(owner, `sessions/${guestId}/revoke`)).statusCode,
+    200,
+  );
+  assert.equal(f.storage.auth.session(guest.raw, Date.now()), null);
+  assert.ok(f.storage.auth.session(other.raw, Date.now()));
+  assert.equal(
+    (await f.post(owner, `sessions/${guestId}/revoke`)).statusCode,
+    404,
+  );
+});
+
+test('action controls distinguish two live sessions of the same identity', async (t) => {
+  const f = fixture(t);
+  const first = await f.login();
+  const second = await f.login();
+  const action = await f.request(first);
+  await f.approve(second, action.id);
+  const firstView = f.storage.control
+    .overview(first.raw, Date.now())
+    .actions.find((row) => row.id === action.id)!;
+  const secondView = f.storage.control
+    .overview(second.raw, Date.now())
+    .actions.find((row) => row.id === action.id)!;
+  assert.equal(firstView.permissions.execute, true);
+  assert.equal(secondView.permissions.execute, false);
+  assert.equal(secondView.permissions.cancel, true);
+  const id = second.response.json<{ id: string }>().id;
+  assert.equal((await f.post(first, `sessions/${id}/revoke`)).statusCode, 200);
+  assert.equal(
+    (await f.post(first, `actions/${action.id}/execute`)).statusCode,
+    409,
+  );
+});

@@ -58,10 +58,13 @@ async function api(path, body, headers = {}) {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const result = await response.json();
-  if (!response.ok)
-    throw new Error(
+  if (!response.ok) {
+    const error = new Error(
       result.error?.message ?? 'The request could not be completed.',
     );
+    error.status = response.status;
+    throw error;
+  }
   return result;
 }
 function showSession(session) {
@@ -174,4 +177,10 @@ api('me')
     /* No active session on first visit. */
   });
 
-window.gozne = { api, busy, providers, walletSelect };
+window.gozne = {
+  api,
+  busy,
+  providers,
+  walletSelect,
+  isBusy: () => operationPending,
+};
