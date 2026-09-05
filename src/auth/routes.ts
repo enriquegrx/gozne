@@ -73,6 +73,7 @@ export async function authRoutes(
   app: FastifyInstance,
   store: AuthStore,
   now = Date.now,
+  surface: 'public' | 'admin' = 'public',
 ): Promise<void> {
   await app.register(cookie);
   await app.register(rateLimit, {
@@ -90,6 +91,24 @@ export async function authRoutes(
         503,
         'POLICY_NOT_CONFIGURED',
         'Configure an access policy first',
+      );
+  });
+
+  const surfaceOrigin = (application: string) => {
+    const entry = store
+      .policy()
+      ?.policy.applications.find((app) => app.id === application);
+    return surface === 'admin' ? entry?.adminOrigin : entry?.origin;
+  };
+  // Enforce audience even for clients which omit Origin or manually copy cookies.
+  app.addHook('preHandler', async (request) => {
+    const raw = request.cookies[SESSION_COOKIE];
+    const session = raw ? store.session(raw, now()) : null;
+    if (session && session.origin !== surfaceOrigin(session.application))
+      throw new AuthError(
+        403,
+        'SURFACE_DENIED',
+        'Session belongs to another surface',
       );
   });
 
@@ -117,7 +136,14 @@ export async function authRoutes(
           'APPLICATION_DENIED',
           'Application is not available',
         );
-      originAllowed(request, application.origin);
+      const origin = surfaceOrigin(application.id);
+      if (!origin)
+        throw new AuthError(
+          403,
+          'APPLICATION_DENIED',
+          'Surface is not configured',
+        );
+      originAllowed(request, origin);
       const { network, chainId } = request.body;
       const allowed =
         network === 'evm'
@@ -140,7 +166,7 @@ export async function authRoutes(
         network,
         address,
         chain: chainId,
-        origin: application.origin,
+        origin,
         issuedAt: time,
         expiresAt: time + 300_000,
       };
@@ -185,7 +211,11 @@ export async function authRoutes(
       const context = request.cookies[CONTEXT_COOKIE];
       if (!validToken(context)) return deny();
       const challenge = store.nonce(request.body.nonce, context);
-      if (!challenge) return deny();
+      if (
+        !challenge ||
+        challenge.origin !== surfaceOrigin(challenge.application)
+      )
+        return deny();
       originAllowed(request, challenge.origin);
       const verified =
         request.body.message === challenge.message &&

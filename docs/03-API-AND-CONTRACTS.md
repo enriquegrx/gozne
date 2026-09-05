@@ -1,9 +1,11 @@
 # API and integration contracts
 
 The machine-readable contract is [openapi.yaml](../openapi.yaml). Browser login,
-API and panel share one HTTPS origin. No policy means authentication routes
-return `503`. Timestamps are Unix milliseconds unless a signed message uses
-ISO 8601.
+Each surface uses its own same-origin HTTPS API. Public authentication and
+private administration use different hostnames. Control routes exist only with
+`GOZNE_SURFACE=admin`; the default is `public`. No policy means authentication
+routes return `503`. Timestamps are Unix milliseconds unless a signed message
+uses ISO 8601.
 
 ## Authentication routes
 

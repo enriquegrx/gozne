@@ -1,6 +1,9 @@
 name: gozne-demo
 services:
   gateway:
+    networks: [public-backend]
+    environment:
+      GOZNE_SURFACE: public
     build: ../..
     image: gozne:dev
     read_only: true
@@ -13,6 +16,7 @@ services:
     mem_limit: 256m
     pids_limit: 100
   demo-app:
+    networks: [public-backend]
     image: gozne:dev
     command: [node, /demo/server.mjs]
     read_only: true
@@ -32,6 +36,7 @@ services:
       timeout: 3s
       retries: 10
   proxy:
+    networks: [public-entry, public-backend]
     image: nginxinc/nginx-unprivileged:stable-alpine@sha256:9b87ad3dd9f431c733f19dfb278c7eb3dba9dca381942c79818bb42f1a566a83
     entrypoint: [nginx, -g, 'daemon off;']
     labels:
@@ -49,6 +54,50 @@ services:
     volumes:
       - ../nginx/orbstack.conf:/etc/nginx/nginx.conf:ro
       - ../nginx/routes.conf:/etc/nginx/gozne-routes.conf:ro
-      - ../login:/usr/share/nginx/html:ro
+      - ../login/index.html:/usr/share/nginx/html/index.html:ro
+      - ../login/login.js:/usr/share/nginx/html/login.js:ro
+      - ../login/style.css:/usr/share/nginx/html/style.css:ro
+  admin-api:
+    image: gozne:dev
+    environment:
+      GOZNE_SURFACE: admin
+    networks: [admin-backend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
+    volumes:
+      - state:/app/state
+    mem_limit: 256m
+    pids_limit: 100
+  admin-panel:
+    image: nginxinc/nginx-unprivileged:stable-alpine@sha256:9b87ad3dd9f431c733f19dfb278c7eb3dba9dca381942c79818bb42f1a566a83
+    entrypoint: [nginx, -g, 'daemon off;']
+    networks: [admin-entry, admin-backend]
+    ports:
+      - '127.0.0.1:${DEMO_ADMIN_PORT:-9443}:8443'
+    depends_on:
+      admin-api:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
+    volumes:
+      - ../nginx/admin.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/admin-routes.conf:/etc/nginx/admin-routes.conf:ro
+      - ../login/admin.html:/usr/share/nginx/html/admin.html:ro
+      - ../login/login.js:/usr/share/nginx/html/login.js:ro
+      - ../login/panel.js:/usr/share/nginx/html/panel.js:ro
+      - ../login/style.css:/usr/share/nginx/html/style.css:ro
+      - ${DEMO_TLS_DIRECTORY:-./tls}/cert.pem:/etc/nginx/cert.pem:ro
+      - ${DEMO_TLS_DIRECTORY:-./tls}/key.pem:/etc/nginx/key.pem:ro
+networks:
+  public-entry:
+  public-backend:
+    internal: true
+  admin-entry:
+  admin-backend:
+    internal: true
 volumes:
   state:

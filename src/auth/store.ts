@@ -346,7 +346,7 @@ export class AuthStore {
     if (
       !access ||
       access.identity !== row.identity ||
-      app?.origin !== row.origin
+      (app?.origin !== row.origin && app?.adminOrigin !== row.origin)
     )
       return null;
     return { ...row, roles: access.roles };
@@ -380,7 +380,7 @@ export class AuthStore {
     if (
       !access ||
       access.identity !== row.identity ||
-      app?.origin !== row.origin
+      (app?.origin !== row.origin && app?.adminOrigin !== row.origin)
     )
       return null;
     return { ...row, roles: access.roles, csrfToken: csrfFor(sessionToken) };

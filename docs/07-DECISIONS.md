@@ -118,3 +118,18 @@ consumption are committed together, making concurrent execution reject
 duplicates. An external deployment integration must provide its own
 idempotency/delivery model; do not describe this local guarantee as distributed
 exactly-once execution.
+
+## Separate public authentication from private administration
+
+`GOZNE_SURFACE` selects which API surface a process serves; the default is
+public and has no control routes. A second process serves the private control
+API. The panel uses a separate HTTPS hostname configured as `adminOrigin` per
+application. Stored nonce/session origins act as the audience, with explicit
+listener checks even if the caller omits Origin. This requires no schema change.
+
+The Compose examples use two separate backend networks and loopback-only
+administration ingress. Both trusted API processes share the same local SQLite
+volume, retaining transactional policy updates and immediate revocation. This
+does not isolate the database from a compromised API process; moving across
+hosts or establishing that stronger boundary requires a different persistence
+architecture. No database is mounted into either frontend.

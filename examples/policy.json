@@ -6,14 +6,17 @@
       "origin": "https://localhost:8443",
       "evmChainIds": [1],
       "solanaChains": ["solana:mainnet", "solana:devnet"],
-      "requiredRoles": ["reader"]
+      "requiredRoles": ["reader"],
+      "adminOrigin": "https://127.0.0.1:9443"
     }
   ],
   "identities": [
     {
       "id": "example-user",
       "wallets": [],
-      "grants": { "demo": ["reader", "admin"] }
+      "grants": {
+        "demo": ["reader", "admin"]
+      }
     }
   ]
 }

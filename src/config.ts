@@ -2,6 +2,7 @@ import { isIP } from 'node:net';
 import { resolve } from 'node:path';
 
 export interface Config {
+  surface: 'public' | 'admin';
   host: string;
   port: number;
   databasePath: string;
@@ -11,6 +12,7 @@ export interface Config {
 export class ConfigError extends Error {}
 
 const keys = new Set([
+  'GOZNE_SURFACE',
   'GOZNE_HOST',
   'GOZNE_PORT',
   'GOZNE_DATABASE',
@@ -23,6 +25,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   ) {
     throw new ConfigError('Unknown GOZNE configuration option');
   }
+  const surface = env.GOZNE_SURFACE ?? 'public';
+  if (surface !== 'public' && surface !== 'admin')
+    throw new ConfigError('GOZNE_SURFACE must be public or admin');
   const host = env.GOZNE_HOST ?? '127.0.0.1';
   if (!isIP(host)) throw new ConfigError('GOZNE_HOST must be an IP address');
   const rawPort = env.GOZNE_PORT ?? '3001';
@@ -50,6 +55,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     );
   }
   return {
+    surface,
     host,
     port: Number(rawPort),
     databasePath: resolve(database),

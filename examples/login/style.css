@@ -781,3 +781,15 @@ summary {
     padding-top: 12px;
   }
 }
+
+.login-page {
+  display: block;
+}
+.login-shell {
+  max-width: 520px;
+  margin: 5vh auto;
+  padding: 24px;
+}
+.login-shell .brand {
+  margin-bottom: 32px;
+}

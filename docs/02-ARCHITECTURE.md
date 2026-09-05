@@ -10,13 +10,14 @@ repository.
 
 ```mermaid
 flowchart LR
-    U[Browser + wallet] -->|Login or action proof| G[Gozne API]
-    G --> V[SIWE / SIWS verification]
-    G --> S[(SQLite)]
-    P[Reverse proxy] -->|Live session validation| G
-    P -->|Verified headers| A[Protected application]
-    C[Local CLI] --> S
-    U -->|Static assets| P
+    U[Public browser + wallet] --> P[Public HTTPS proxy]
+    P --> G[Public authentication API]
+    P --> A[Protected application]
+    G --> S[(Local SQLite)]
+    I[Local or VPN browser] --> D[Private panel + HTTPS proxy]
+    D --> C[Private control API]
+    C --> S
+    O[Local CLI] --> S
 ```
 
 ## Components
@@ -86,5 +87,8 @@ in English.
   live session with the application's reserved `admin` role; mutations also
   require same-origin checks and CSRF.
 
-The static panel is public, but its data and mutations are authenticated. Hiding
-a button is never an authorization control.
+The dashboard and control API use private ingress, separate containers and a
+separate session audience. The default public API registers no control routes.
+Only the backend processes share the local SQLite volume; neither Nginx frontend
+can read it. This is a single-host deployment, not a distributed database
+design. See [private administration](12-PRIVATE-ADMINISTRATION.md).

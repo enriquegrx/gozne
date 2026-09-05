@@ -9,9 +9,9 @@ command.
 
 On a new installation, follow the [README](../README.md). The starter
 `example-user` identity has `reader` and `admin` for `demo` and no wallets.
-Attach your public address with the CLI, then open the HTTPS demo in a browser
-with that wallet installed. Select Rabby, MetaMask or another detected EVM
-provider explicitly; Phantom handles Solana.
+Attach your public address with the CLI, then open the internal panel at
+`https://127.0.0.1:9443` in a browser with that wallet installed. Select Rabby,
+MetaMask or another detected EVM provider explicitly; Phantom handles Solana.
 
 The panel shows `ADMIN` after an administrator signs in. Only administrators can
 create or revoke invitations and sign approvals. A valid reader can request an
@@ -271,17 +271,20 @@ policy's 1,000 identities, with at most 20 wallets and 20 roles per
 identity/application. Full policy export, application definitions and
 cross-application changes remain local CLI operations.
 
-### Deployment boundary: current behavior versus next design
+### Deployment boundary
 
-The panel talks to the gateway through a same-origin JSON/HTTP API. It is still
-served by the demo's existing Nginx and protected by application-role checks.
-**This change does not make the administration routes internal-only.**
-Publishing that proxy would also publish those authenticated routes.
+The panel and its JSON API now run in separate containers from public sign-in.
+The public API does not register control routes, and the public proxy does not
+serve panel assets. Both Compose variants publish administration on loopback
+only, at `https://127.0.0.1:9443`. See the complete
+[private administration guide](12-PRIVATE-ADMINISTRATION.md).
 
-A separate dashboard container and an internal administration origin/network are
-planned for architectural review, not implemented here. A container boundary
-alone does not make an API private: ingress rules must also keep administrative
-routes off the public authentication listener. A future split must explicitly
-handle administrator authentication, host-only cookies, Origin/CSRF checks and
-service authorization; it should not share the database directly with a browser
-frontend or expose a privileged API token to browser JavaScript.
+Panel sessions sign the application's `adminOrigin`. Public sessions sign its
+`origin`; cookies, proofs and sessions cannot be moved between surfaces. Each
+browser page calls its own same-origin API, without privileged JavaScript API
+keys. Administration mutations still require an admin role and CSRF.
+
+The invitations link to the **public application**. A collaborator can sign in
+there without network access to administration. The signed-action simulation now
+lives inside the private workspace: readers need internal network access and a
+separate workspace sign-in to request or execute a simulated action.

@@ -1,10 +1,12 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.6
+  version: 0.1.0-dev.7
   description:
     Alpha EVM/SIWS authentication and signed simulation controls. API and login
-    require the same HTTPS origin. Authentication returns 503 without a policy.
+    require the same HTTPS origin within each surface. Control paths exist only
+    on the private admin surface (GOZNE_SURFACE=admin), never the public
+    listener. Authentication returns 503 without a policy.
 paths:
   /healthz:
     get:

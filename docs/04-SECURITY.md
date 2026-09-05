@@ -60,11 +60,15 @@ and a second live authorization check inside the transaction. The API cannot
 edit another application's grants or mutate shared identity wallets. Current
 operator lockout is rejected. Policy-write failure rolls back invalidation.
 
-The static panel is publicly readable. The control API requires authentication;
-only session-scoped administrator routes expose invitation and session metadata.
-All mutations require CSRF and exact origin checks. The CLI and database volume
-remain privileged local surfaces. Protect them with operating-system
-permissions.
+The panel and control API use private ingress; neither is served by the public
+authentication proxy. The public API registers no control routes. Distinct HTTPS
+hostnames and server-side audience checks prevent public cookies or proofs from
+being reused on the administration listener. See
+[private administration](12-PRIVATE-ADMINISTRATION.md). The control API requires
+authentication; only session-scoped administrator routes expose invitation and
+session metadata. All mutations require CSRF and exact origin checks. The CLI
+and database volume remain privileged local surfaces. Protect them with
+operating-system permissions.
 
 ## Persistence and recovery
 

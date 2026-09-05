@@ -110,3 +110,16 @@ demo's Nginx image is separate and is not included in the `gozne:dev` scan.
 
 References: [npm SBOM](https://docs.npmjs.com/cli/v11/commands/npm-sbom) and
 [Trivy image scanning](https://trivy.dev/docs/dev/references/configuration/cli/trivy_image/).
+
+## Private administration boundary
+
+Unit tests exercise two API instances against separate connections to the same
+SQLite file, verifying public route absence, cross-surface proof/session denial,
+policy visibility and invalidation. Hostname validation rejects port-only
+separation and overlap with another application's public hostname.
+
+The HTTPS test starts separate public and internal proxy containers, verifies
+loopback publication and disjoint network membership, checks public dashboard
+assets/control routes return 404, then uses independent signed private sessions
+for invitations, user management and simulated actions. Public wallet login and
+protected application access remain part of the same test.

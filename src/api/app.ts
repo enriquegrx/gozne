@@ -104,10 +104,11 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
     authentication: true,
   }));
   void app.register(async (scope) => {
-    await authRoutes(scope, storage.auth, now);
-    await scope.register(async (control) =>
-      controlRoutes(control, storage.auth, storage.control, now),
-    );
+    await authRoutes(scope, storage.auth, now, config.surface);
+    if (config.surface === 'admin')
+      await scope.register(async (control) =>
+        controlRoutes(control, storage.auth, storage.control, now),
+      );
   });
   app.addHook('onClose', async () => {
     storage.close();

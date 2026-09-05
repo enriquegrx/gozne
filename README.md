@@ -82,6 +82,7 @@ Start OrbStack, then run:
 ```sh
 git clone https://github.com/enriquegrx/gozne.git
 cd gozne
+sh scripts/demo-certs.sh
 docker compose -f examples/compose/orbstack.yaml up --build -d --wait
 docker compose -f examples/compose/orbstack.yaml exec gateway gozne policy apply /app/policy.json
 ```
@@ -98,6 +99,14 @@ docker compose -f examples/compose/orbstack.yaml exec gateway gozne wallet attac
 Use `solana` instead of `evm` for a Solana address. Open the HTTPS URL in the
 browser where your wallet extension is installed, select it and sign in. For
 EVM, the example policy allows Ethereum mainnet, chain ID `1`.
+
+The public URL now contains only wallet sign-in and the protected application.
+Open the separate [internal panel](https://127.0.0.1:9443) for administration.
+Its port is bound to loopback, with a separate API and Docker network. The local
+panel certificate generated above is self-signed and lasts seven days; review
+and trust that certificate locally for browser testing. Production requires a
+trusted certificate and private ingress. See the
+[private administration deployment guide](docs/12-PRIVATE-ADMINISTRATION.md).
 
 The [control panel walkthrough](docs/11-CONTROL-PANEL.md) takes you through the
 owner/collaborator demo, permission rules, API calls and exact execution limits.
@@ -153,12 +162,13 @@ npm run cli -- doctor --json
 
 Configuration validation is read-only. `doctor` expects an initialized database.
 
-| Variable          | Local default          | Purpose                             |
-| ----------------- | ---------------------- | ----------------------------------- |
-| `GOZNE_HOST`      | `127.0.0.1`            | Listen address                      |
-| `GOZNE_PORT`      | `3001`                 | HTTP port                           |
-| `GOZNE_DATABASE`  | `./state/gozne.sqlite` | SQLite file                         |
-| `GOZNE_LOG_LEVEL` | `info`                 | `silent`, `info`, `warn` or `error` |
+| Variable          | Local default          | Purpose                                              |
+| ----------------- | ---------------------- | ---------------------------------------------------- |
+| `GOZNE_SURFACE`   | `public`               | `public` authentication or `admin` internal controls |
+| `GOZNE_HOST`      | `127.0.0.1`            | Listen address                                       |
+| `GOZNE_PORT`      | `3001`                 | HTTP port                                            |
+| `GOZNE_DATABASE`  | `./state/gozne.sqlite` | SQLite file                                          |
+| `GOZNE_LOG_LEVEL` | `info`                 | `silent`, `info`, `warn` or `error`                  |
 
 The container listens on `0.0.0.0` and stores state in `/app/state`. No session
 signing secret is needed. Node reads environment variables; it does not load

@@ -19,9 +19,16 @@ await once(listener, 'listening');
 const port = listener.address().port;
 await new Promise((resolve) => listener.close(resolve));
 const origin = `https://localhost:${port}`;
+const adminListener = createServer();
+adminListener.listen(0, '127.0.0.1');
+await once(adminListener, 'listening');
+const adminPort = adminListener.address().port;
+await new Promise((resolve) => adminListener.close(resolve));
+const adminOrigin = `https://127.0.0.1:${adminPort}`;
 const env = {
   ...process.env,
   DEMO_PORT: String(port),
+  DEMO_ADMIN_PORT: String(adminPort),
   DEMO_TLS_DIRECTORY: directory,
   DEMO_POLICY_FILE: join(directory, 'policy.json'),
 };
@@ -40,6 +47,7 @@ const policy = {
     {
       id: 'demo',
       origin,
+      adminOrigin,
       evmChainIds: [1],
       solanaChains: ['solana:devnet'],
       requiredRoles: ['reader'],
@@ -73,17 +81,17 @@ try {
   );
   compose('up', '-d', '--wait', '--wait-timeout', '90');
   const ca = readFileSync(join(directory, 'cert.pem'));
-  const http = (path, { body, cookie, headers = {} } = {}) =>
+  const http = (path, { body, cookie, headers = {}, internal = false } = {}) =>
     new Promise((resolve, reject) => {
       const payload = body === undefined ? undefined : JSON.stringify(body);
       const req = request(
-        `${origin}${path}`,
+        `${internal ? adminOrigin : origin}${path}`,
         {
           family: 4,
           ca,
           method: payload ? 'POST' : 'GET',
           headers: {
-            origin,
+            origin: internal ? adminOrigin : origin,
             'sec-fetch-site': 'same-origin',
             ...(cookie ? { cookie } : {}),
             ...(payload
@@ -111,6 +119,29 @@ try {
       req.end(payload);
     });
   assert.equal((await http('/')).status, 200);
+  assert.doesNotMatch((await http('/')).text, /panel.js|Users &amp; wallets/);
+  for (const path of [
+    '/panel.js',
+    '/admin.html',
+    '/v1/auth/control',
+    '/v1/auth/control/users',
+    '/v1/auth/control%2fusers',
+  ])
+    assert.equal((await http(path)).status, 404, path);
+  assert.match(
+    (await http('/', { internal: true })).text,
+    /Users &amp; wallets/,
+  );
+  const services = JSON.parse(compose('config', '--format', 'json')).services;
+  assert.equal(services['admin-panel'].ports[0].host_ip, '127.0.0.1');
+  assert.equal(services['admin-api'].ports, undefined);
+  assert.equal(services.gateway.ports, undefined);
+  assert.ok(
+    Object.keys(services['admin-api'].networks).every(
+      (n) => !Object.hasOwn(services.proxy.networks, n),
+    ),
+  );
+
   assert.equal((await http('/v1/auth/validate?application=demo')).status, 404);
   assert.equal((await http('/private/')).status, 302);
   const cookieFrom = (response, name) => {
@@ -122,6 +153,37 @@ try {
     assert.doesNotMatch(cookie, /Domain=/);
     return cookie.split(';')[0];
   };
+  async function adminLogin(wallet = eth, solana = false) {
+    const nonce = await http('/v1/auth/nonce', {
+      internal: true,
+      body: {
+        application: 'demo',
+        network: solana ? 'solana' : 'evm',
+        address: solana ? solAddress : wallet.address,
+        chainId: solana ? 'solana:devnet' : '1',
+      },
+    });
+    assert.equal(nonce.status, 200, nonce.text);
+    const proof = JSON.parse(nonce.text);
+    const verified = await http('/v1/auth/verify', {
+      internal: true,
+      cookie: cookieFrom(nonce, '__Host-gozne-login'),
+      body: {
+        nonce: proof.nonce,
+        message: proof.message,
+        signature: solana
+          ? Buffer.from(
+              ed25519.sign(new TextEncoder().encode(proof.message), solKey),
+            ).toString('base64')
+          : await wallet.signMessage(proof.message),
+      },
+    });
+    assert.equal(verified.status, 200, verified.text);
+    return {
+      cookie: cookieFrom(verified, '__Host-gozne-session'),
+      session: JSON.parse(verified.text),
+    };
+  }
   for (const network of ['evm', 'solana']) {
     const nonce = await http('/v1/auth/nonce', {
       body: {
@@ -159,14 +221,24 @@ try {
     assert.equal(result.headers['x-gozne-identity'], 'tester');
     assert.equal(result.headers['x-gozne-role'], 'reader,admin');
     assert.equal(result.headers['x-gozne-injected'], undefined);
+    const admin = await adminLogin(eth, network === 'solana');
+    assert.equal(
+      (await http('/v1/auth/me', { cookie: admin.cookie })).status,
+      403,
+    );
+    assert.equal(
+      (await http('/v1/auth/control/users', { internal: true, cookie })).status,
+      403,
+    );
     if (network === 'evm') {
       const control = (
         path,
         body = {},
-        clientCookie = cookie,
-        csrf = session.csrfToken,
+        clientCookie = admin.cookie,
+        csrf = admin.session.csrfToken,
       ) =>
         http(`/v1/auth/control/${path}`, {
+          internal: true,
           cookie: clientCookie,
           body,
           headers: { 'x-csrf-token': csrf },
@@ -203,11 +275,12 @@ try {
         (await http('/private/', { cookie: guestCookie })).status,
         200,
       );
+      const internalGuest = await adminLogin(guest);
       const requested = await control(
         'actions',
         { project: 'website', version: 'v1.2.3', environment: 'staging' },
-        guestCookie,
-        guestSession.csrfToken,
+        internalGuest.cookie,
+        internalGuest.session.csrfToken,
       );
       assert.equal(requested.status, 200, requested.text);
       const action = JSON.parse(requested.text);
@@ -226,8 +299,8 @@ try {
         control(
           `actions/${action.id}/execute`,
           {},
-          guestCookie,
-          guestSession.csrfToken,
+          internalGuest.cookie,
+          internalGuest.session.csrfToken,
         );
       assert.equal((await execute()).status, 200);
       assert.equal((await execute()).status, 409);
@@ -250,11 +323,15 @@ try {
       );
     }
     if (network === 'solana') {
-      const directory = await http('/v1/auth/control/users', { cookie });
+      const directory = await http('/v1/auth/control/users', {
+        cookie: admin.cookie,
+        internal: true,
+      });
       assert.equal(directory.status, 200, directory.text);
       const saved = await http('/v1/auth/control/users', {
-        cookie,
-        headers: { 'x-csrf-token': session.csrfToken },
+        internal: true,
+        cookie: admin.cookie,
+        headers: { 'x-csrf-token': admin.session.csrfToken },
         body: {
           revision: JSON.parse(directory.text).revision,
           create: true,
@@ -357,7 +434,7 @@ try {
     'proxy must fail closed when Gozne is unavailable',
   );
   console.log(
-    'HTTPS/Nginx verified: EVM + SIWS login, header sanitation, CLI and panel revocation, logout, permanent user management, wallet-bound invitation, signed action, one-time execution, backup/restore and failure closure.',
+    'HTTPS/Nginx verified: separate public/admin origins, public route denial, loopback-only administration, EVM + SIWS login, header sanitation, CLI and panel revocation, logout, permanent user management, wallet-bound invitation, signed action, one-time execution, backup/restore and failure closure.',
   );
 } catch (error) {
   // These are isolated synthetic services; request bodies and signatures are not logged.

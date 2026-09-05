@@ -6,6 +6,7 @@ import type { Network } from '../wallets/proofs.js';
 export interface Application {
   id: string;
   origin: string;
+  adminOrigin?: string;
   evmChainIds: number[];
   solanaChains: string[];
   requiredRoles: string[];
@@ -64,6 +65,7 @@ export function validatePolicy(value: unknown): Policy {
       const app = object(value, [
         'id',
         'origin',
+        'adminOrigin',
         'evmChainIds',
         'solanaChains',
         'requiredRoles',
@@ -85,6 +87,26 @@ export function validatePolicy(value: unknown): Policy {
         throw new ConfigError(
           'Application origin must be a canonical HTTPS origin without a path',
         );
+      if (app.adminOrigin !== undefined) {
+        if (typeof app.adminOrigin !== 'string')
+          throw new ConfigError('Invalid admin origin');
+        let admin: URL;
+        try {
+          admin = new URL(app.adminOrigin);
+        } catch {
+          throw new ConfigError('Invalid admin origin');
+        }
+        if (
+          admin.protocol !== 'https:' ||
+          admin.origin !== app.adminOrigin ||
+          admin.username ||
+          admin.password ||
+          admin.hostname === url.hostname
+        )
+          throw new ConfigError(
+            'Admin origin must be canonical HTTPS on a different hostname',
+          );
+      }
       const evmChainIds = unique(
         list(app.evmChainIds, 20).map((chain) => {
           if (
@@ -112,12 +134,27 @@ export function validatePolicy(value: unknown): Policy {
       return {
         id: identifier(app.id),
         origin: app.origin,
+        ...(app.adminOrigin === undefined
+          ? {}
+          : { adminOrigin: app.adminOrigin as string }),
         evmChainIds,
         solanaChains,
         requiredRoles: roles(app.requiredRoles),
       };
     },
   );
+  const publicHosts = new Set(
+    applications.map((app) => new URL(app.origin).hostname),
+  );
+  if (
+    applications.some(
+      (app) =>
+        app.adminOrigin && publicHosts.has(new URL(app.adminOrigin).hostname),
+    )
+  )
+    throw new ConfigError(
+      'Admin hostnames must be separate from all public application hostnames',
+    );
   const appIds = unique(applications.map((app) => app.id));
   const walletKeys = new Set<string>();
   const identities = list(root.identities, 1000).map((value): Identity => {

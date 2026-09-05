@@ -28,14 +28,16 @@ function fixture(t: TestContext) {
     applications: [
       {
         id: 'demo',
-        origin,
+        origin: 'https://public.example.test',
+        adminOrigin: origin,
         evmChainIds: [1],
         solanaChains: ['solana:devnet'],
         requiredRoles: ['reader'],
       },
       {
         id: 'other',
-        origin,
+        origin: 'https://public.example.test',
+        adminOrigin: origin,
         evmChainIds: [1],
         solanaChains: [],
         requiredRoles: ['reader'],
@@ -54,7 +56,11 @@ function fixture(t: TestContext) {
   });
   let now = Date.now();
   const app = buildApp(
-    loadConfig({ GOZNE_DATABASE: path, GOZNE_LOG_LEVEL: 'silent' }),
+    loadConfig({
+      GOZNE_DATABASE: path,
+      GOZNE_LOG_LEVEL: 'silent',
+      GOZNE_SURFACE: 'admin',
+    }),
     storage,
     () => now,
   );

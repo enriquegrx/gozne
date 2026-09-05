@@ -426,7 +426,7 @@ export class ControlStore {
         address,
         expiresAt,
         roles: ['reader'],
-        url: actor.origin + '/',
+        url: app.origin + '/',
       };
     });
   }

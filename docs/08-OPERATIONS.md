@@ -5,6 +5,7 @@
 From the repository root with OrbStack running:
 
 ```sh
+sh scripts/demo-certs.sh
 docker compose -f examples/compose/orbstack.yaml up --build -d --wait
 docker compose -f examples/compose/orbstack.yaml exec gateway gozne policy apply /app/policy.json
 docker compose -f examples/compose/orbstack.yaml exec gateway gozne wallet attach example-user evm YOUR_PUBLIC_ADDRESS
@@ -45,6 +46,18 @@ certificate lasts seven days. Review and trust it locally for browser testing;
 it is not a deployment certificate. Both demo variants share a Compose project
 name, so stop one before starting the other and use the correct origin policy.
 
+## Private administration
+
+Both Compose variants now run a separate `admin-panel` and `admin-api`. Open
+`https://127.0.0.1:9443` after reviewing/trusting the local demo certificate.
+Public sign-in stays at the public application URL. The two hostnames must be
+different, since browser cookies are not isolated by port.
+
+For upgrades, private networking, TLS and SSH access, follow
+[Private administration](12-PRIVATE-ADMINISTRATION.md). Do not reapply the
+starter policy to add `adminOrigin`; export and edit the existing policy
+instead.
+
 ## Policy and CLI
 
 SQLite is authoritative; a mounted policy file is not watched. Export the live
@@ -58,9 +71,9 @@ docker compose -f examples/compose/orbstack.yaml exec -T gateway gozne policy ex
 Edit the private file, then copy and apply it:
 
 ```sh
-docker compose -f examples/compose/orbstack.yaml cp policy.local.json gateway:/app/state/policy-update.json
-docker compose -f examples/compose/orbstack.yaml exec gateway gozne policy check /app/state/policy-update.json
-docker compose -f examples/compose/orbstack.yaml exec gateway gozne policy apply /app/state/policy-update.json
+docker compose -f examples/compose/orbstack.yaml exec -T gateway sh -c 'umask 077; cat > /app/state/policy-import.json' < policy.local.json
+docker compose -f examples/compose/orbstack.yaml exec gateway gozne policy check /app/state/policy-import.json
+docker compose -f examples/compose/orbstack.yaml exec gateway gozne policy apply /app/state/policy-import.json
 ```
 
 An identity needs a nonempty explicit grant and every application
