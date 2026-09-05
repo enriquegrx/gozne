@@ -107,8 +107,8 @@ Required external configuration:
   certificate payload, checks the hostname, expiry and matching private key,
   validates Nginx, reloads `admin-panel` and restores the previous files if
   validation fails.
-- Deployment diagnostics: pass the exact internal listener to
-  `gozne check-deployment --admin-bind INTERNAL_IP`; the default permits only
+- Deployment diagnostics: run `npm run deployment:check --` and pass the exact
+  internal listener with `--admin-bind INTERNAL_IP`; the default permits only
   loopback.
 
 The provided hostname and source-IP configuration targets the owner's existing
