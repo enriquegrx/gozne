@@ -841,8 +841,9 @@ body {
   width: 248px;
   padding: 30px 22px;
   border: 0;
-  background: var(--ink);
-  color: var(--paper-light);
+  border-right: 1px solid var(--line);
+  background: #e8e1d4;
+  color: var(--ink);
 }
 
 .admin-page .sidebar::before {
@@ -856,7 +857,7 @@ body {
 
 .admin-page .brand {
   gap: 0.72rem;
-  color: var(--paper-light);
+  color: var(--ink);
   font-size: 1.45rem;
   font-weight: 720;
   letter-spacing: -0.04em;
@@ -888,7 +889,7 @@ body {
 
 .admin-page .alpha {
   margin: 0.2rem 0 0 0.15rem;
-  color: rgba(251, 248, 241, 0.48);
+  color: var(--muted);
   font-size: 0.52rem;
   font-weight: 760;
   letter-spacing: 0.14em;
@@ -896,7 +897,7 @@ body {
 
 .admin-page .nav-label {
   margin: 3.2rem 0.8rem 0.8rem;
-  color: rgba(251, 248, 241, 0.38);
+  color: var(--amber-dark);
 }
 
 .admin-page .sidebar nav {
@@ -907,7 +908,7 @@ body {
   position: relative;
   padding: 0.72rem 0.8rem;
   border-radius: 0.25rem;
-  color: rgba(251, 248, 241, 0.62);
+  color: var(--ink-soft);
   font-size: 0.76rem;
   font-weight: 650;
   transition:
@@ -917,8 +918,8 @@ body {
 }
 
 .admin-page .sidebar nav a:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: white;
+  background: rgba(251, 248, 241, 0.72);
+  color: var(--amber-dark);
   text-decoration: none;
   transform: translateX(2px);
 }
@@ -935,16 +936,16 @@ body {
 
 .admin-page .sidebar-bottom {
   padding: 1.1rem 0.75rem 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(251, 248, 241, 0.72);
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
 }
 
 .admin-page .sidebar-bottom p {
-  color: rgba(251, 248, 241, 0.4);
+  color: var(--muted);
 }
 
 .admin-page .sidebar-bottom a {
-  color: var(--amber);
+  color: var(--amber-dark);
 }
 
 .admin-page .dot {
@@ -967,6 +968,70 @@ body {
 .admin-page .topbar strong {
   color: var(--ink-soft);
   font-weight: 720;
+}
+
+.topbar-actions,
+.login-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.login-toolbar {
+  margin-bottom: 32px;
+}
+
+.login-toolbar .brand {
+  margin-bottom: 0;
+}
+
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.68);
+}
+
+.language-switcher button,
+.admin-page .language-switcher button {
+  width: auto;
+  min-width: 2.2rem;
+  min-height: 1.75rem;
+  margin: 0;
+  padding: 0.28rem 0.48rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.language-switcher button[aria-pressed='true'],
+.admin-page .language-switcher button[aria-pressed='true'] {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+.language-switcher button:hover:not(:disabled),
+.admin-page .language-switcher button:hover:not(:disabled) {
+  border: 0;
+  background: #fff3d4;
+  color: var(--amber-dark);
+  transform: none;
+}
+
+.language-switcher button[aria-pressed='true']:hover:not(:disabled),
+.admin-page
+  .language-switcher
+  button[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--amber);
+  color: var(--ink);
 }
 
 .admin-page .divider {
@@ -1473,7 +1538,7 @@ body {
   .admin-page .sidebar {
     width: auto;
     padding: 1rem 1.25rem;
-    border-bottom: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   .admin-page .sidebar::before {
@@ -1507,17 +1572,20 @@ body {
     padding: 0 1rem;
   }
 
-  .admin-page .topbar > div {
+  .admin-page .topbar > div:first-child {
+    display: none;
+  }
+
+  .admin-page .topbar .topbar-actions {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    margin-left: auto;
+    overflow: visible;
+    white-space: normal;
   }
 
   .admin-page .pill {
-    flex: 0 0 auto;
-    padding-inline: 0.5rem;
-    font-size: 0.5rem;
+    display: none;
   }
 
   .admin-page .page-heading {

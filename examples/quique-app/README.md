@@ -62,6 +62,12 @@ The quique policy intentionally accepts Solana mainnet only in both preview and
 production. Authentication signs a SIWS message and does not submit a
 transaction or incur a fee.
 
+The sign-in page, protected workspace and internal panel share the lightweight
+EN/ES module in `examples/login/i18n.js`. It detects the browser language,
+persists an explicit selection and localizes dates without changing signed
+wallet messages. New interface copy must follow the repository
+[internationalization guide](../../docs/15-INTERNATIONALIZATION.md).
+
 ## Target server deployment
 
 `compose.server.yaml` defines a separate project from the existing QUIQUE.ES

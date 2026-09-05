@@ -55,6 +55,7 @@ services:
       - ../nginx/orbstack.conf:/etc/nginx/nginx.conf:ro
       - ../nginx/routes.conf:/etc/nginx/gozne-routes.conf:ro
       - ../login/index.html:/usr/share/nginx/html/index.html:ro
+      - ../login/i18n.js:/usr/share/nginx/html/i18n.js:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ../login/style.css:/usr/share/nginx/html/style.css:ro
   admin-api:
@@ -87,6 +88,7 @@ services:
       - ../nginx/admin.conf:/etc/nginx/nginx.conf:ro
       - ../nginx/admin-routes.conf:/etc/nginx/admin-routes.conf:ro
       - ../login/admin.html:/usr/share/nginx/html/admin.html:ro
+      - ../login/i18n.js:/usr/share/nginx/html/i18n.js:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ../login/panel.js:/usr/share/nginx/html/panel.js:ro
       - ../login/applications.js:/usr/share/nginx/html/applications.js:ro

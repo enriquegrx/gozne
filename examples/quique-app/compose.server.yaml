@@ -60,6 +60,7 @@ services:
       - ./brand/symbol.png:/usr/share/nginx/html/brand/symbol.png:ro
       - ./wallets:/usr/share/nginx/html/wallets:ro
       - ./workspace.js:/usr/share/nginx/html/workspace.js:ro
+      - ../login/i18n.js:/usr/share/nginx/html/i18n.js:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ./style.css:/usr/share/nginx/html/style.css:ro
   admin-api:
@@ -100,6 +101,7 @@ services:
       - ./admin.server.conf:/etc/nginx/nginx.conf:ro
       - ./admin.server-routes.conf:/etc/nginx/admin-routes.conf:ro
       - ../login/admin.html:/usr/share/nginx/html/admin.html:ro
+      - ../login/i18n.js:/usr/share/nginx/html/i18n.js:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ../login/panel.js:/usr/share/nginx/html/panel.js:ro
       - ../login/applications.js:/usr/share/nginx/html/applications.js:ro

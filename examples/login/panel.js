@@ -3,7 +3,19 @@
 (() => {
   const { api, busy, providers, walletSelect } = window.gozne;
   const select = (id) => document.querySelector(id);
-  const date = (value) => new Date(value).toLocaleString();
+  const t = (source, values) => {
+    if (window.GozneI18n) return window.GozneI18n.t(source, values);
+    return source.replace(/\{([a-zA-Z]+)\}/g, (match, key) =>
+      Object.hasOwn(values || {}, key) ? String(values[key]) : match,
+    );
+  };
+  const date = (value) =>
+    window.GozneI18n
+      ? window.GozneI18n.formatDate(value, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })
+      : new Date(value).toLocaleString();
   const short = (value) =>
     value.length > 24 ? `${value.slice(0, 12)}…${value.slice(-8)}` : value;
   let currentSession = null;
@@ -27,7 +39,7 @@
       busy(async () => {
         await operation();
         await refresh();
-        select('#status').textContent = `${label}: completed.`;
+        select('#status').textContent = t('{label}: completed.', { label });
       }),
     );
     return node;
@@ -39,10 +51,10 @@
     if (currentSession.network === 'solana') {
       const provider = window.phantom?.solana;
       if (!provider?.signIn)
-        throw new Error('Phantom with Sign-In With Solana is required.');
+        throw new Error(t('Phantom with Sign-In With Solana is required.'));
       const account = await provider.connect();
       if (account.publicKey.toString() !== currentSession.address)
-        throw new Error('Select the wallet account used for this session.');
+        throw new Error(t('Select the wallet account used for this session.'));
       const challenge = await mutate(`actions/${id}/challenge`, {
         chainId: select('#solana-chain').value,
       });
@@ -57,10 +69,10 @@
     }
     const provider = providers.get(walletSelect.value);
     if (!provider)
-      throw new Error('Select a detected EVM wallet in the wallet panel.');
+      throw new Error(t('Select a detected EVM wallet in the wallet panel.'));
     const [address] = await provider.request({ method: 'eth_requestAccounts' });
     if (address.toLowerCase() !== currentSession.address.toLowerCase())
-      throw new Error('Select the wallet account used for this session.');
+      throw new Error(t('Select the wallet account used for this session.'));
     const chainId = BigInt(
       await provider.request({ method: 'eth_chainId' }),
     ).toString();
@@ -87,7 +99,7 @@
     if (!actions.length)
       return empty(
         list,
-        'No requests yet. Create a simulated deployment above.',
+        t('No requests yet. Create a simulated deployment above.'),
       );
     for (const action of actions) {
       const record = element('article', undefined, 'record');
@@ -100,36 +112,41 @@
         head,
         element(
           'p',
-          `${action.payload.environment} · Requested by ${short(action.requester)} · Expires ${date(action.expiresAt)}`,
+          `${t(action.payload.environment)} · ${t('Requested by {requester} · Expires {expires}', { requester: short(action.requester), expires: date(action.expiresAt) })}`,
         ),
       );
       if (action.approvedBy)
         record.append(
           element(
             'p',
-            `Approved by ${action.approvedBy} · Approval expires ${date(action.approvalExpiresAt)}`,
+            t('Approved by {approver} · Approval expires {expires}', {
+              approver: action.approvedBy,
+              expires: date(action.approvalExpiresAt),
+            }),
           ),
         );
       const details = element('details');
       details.append(
-        element('summary', 'View signed identifiers'),
+        element('summary', t('View signed identifiers')),
         element('p', `Action: ${action.id}`),
         element('code', `SHA-256: ${action.payloadHash}`),
       );
       record.append(details);
       const controls = element('div', undefined, 'record-actions');
       if (action.permissions.approve)
-        controls.append(button('Sign approval', () => approve(action.id)));
+        controls.append(button(t('Sign approval'), () => approve(action.id)));
       // Execution remains tied to the original session; the server enforces this even for the same identity.
       if (action.permissions.execute)
         controls.append(
-          button('Execute simulation once', () =>
+          button(t('Execute simulation once'), () =>
             mutate(`actions/${action.id}/execute`),
           ),
         );
       if (action.permissions.cancel)
         controls.append(
-          button('Cancel request', () => mutate(`actions/${action.id}/cancel`)),
+          button(t('Cancel request'), () =>
+            mutate(`actions/${action.id}/cancel`),
+          ),
         );
       record.append(controls);
       list.append(record);
@@ -141,12 +158,14 @@
     if (!currentSession.roles.includes('admin'))
       return empty(
         list,
-        'Your invitation grants reader access. Administration is reserved for operators.',
+        t(
+          'Your invitation grants reader access. Administration is reserved for operators.',
+        ),
       );
     if (!invitations.length)
       return empty(
         list,
-        'No invitations yet. Invite a public wallet address above.',
+        t('No invitations yet. Invite a public wallet address above.'),
       );
     for (const invitation of invitations) {
       const state =
@@ -164,16 +183,21 @@
           'h3',
           `${invitation.network.toUpperCase()} · ${short(invitation.address)}`,
         ),
-        element('span', state, 'badge'),
+        element('span', t(state), 'badge'),
       );
       record.append(
         head,
         element('p', invitation.address),
-        element('p', `Reader · Expires ${date(invitation.expiresAt)}`),
+        element(
+          'p',
+          t('Reader · Expires {expires}', {
+            expires: date(invitation.expiresAt),
+          }),
+        ),
       );
       if (['invited', 'accepted'].includes(state))
         record.append(
-          button('Revoke access', () =>
+          button(t('Revoke access'), () =>
             mutate(`invitations/${invitation.id}/revoke`),
           ),
         );
@@ -186,7 +210,9 @@
     if (!deployments.length)
       return empty(
         list,
-        'Executed simulations will appear here. No infrastructure is changed.',
+        t(
+          'Executed simulations will appear here. No infrastructure is changed.',
+        ),
       );
     for (const deployment of deployments) {
       const row = element('article', undefined, 'record');
@@ -194,7 +220,10 @@
         element('h3', `${deployment.project} / ${deployment.version}`),
         element(
           'p',
-          `${deployment.environment} · Simulated · ${date(deployment.executedAt)}`,
+          t('{environment} · Simulated · {date}', {
+            environment: t(deployment.environment),
+            date: date(deployment.executedAt),
+          }),
         ),
         element('code', deployment.actionId),
       );
@@ -203,7 +232,7 @@
   }
   function walletRow(wallet = { network: 'evm', address: '', enabled: true }) {
     const row = element('div', undefined, 'wallet-row');
-    const networkLabel = element('label', 'Network');
+    const networkLabel = element('label', t('Network'));
     const network = element('select');
     network.className = 'wallet-network';
     for (const name of ['evm', 'solana']) {
@@ -213,20 +242,20 @@
     }
     network.value = wallet.network;
     networkLabel.append(network);
-    const addressLabel = element('label', 'Public address');
+    const addressLabel = element('label', t('Public address'));
     const address = element('input');
     address.className = 'wallet-address';
     address.value = wallet.address;
     address.required = true;
     address.maxLength = 64;
     addressLabel.append(address);
-    const enabledLabel = element('label', 'Enabled');
+    const enabledLabel = element('label', t('Enabled'));
     const enabled = element('input');
     enabled.type = 'checkbox';
     enabled.className = 'wallet-enabled';
     enabled.checked = wallet.enabled;
     enabledLabel.append(enabled);
-    const remove = element('button', 'Remove', 'secondary');
+    const remove = element('button', t('Remove'), 'secondary');
     remove.type = 'button';
     remove.addEventListener('click', () => row.remove());
     row.append(networkLabel, addressLabel, enabledLabel, remove);
@@ -249,8 +278,12 @@
       : false;
     select('#user-wallet-help').textContent =
       user && !user.walletsEditable
-        ? 'These wallets are shared across applications or belong to an application manager. Only application roles can be edited here; use the operator CLI for wallet changes.'
-        : 'Add, disable or remove public wallets. Never enter private keys or seed phrases.';
+        ? t(
+            'These wallets are shared across applications or belong to an application manager. Only application roles can be edited here; use the operator CLI for wallet changes.',
+          )
+        : t(
+            'Add, disable or remove public wallets. Never enter private keys or seed phrases.',
+          );
   }
   async function loadUsers() {
     if (!currentSession?.roles.includes('admin')) return;
@@ -264,13 +297,13 @@
     directory = result;
     const picker = select('#user-picker');
     picker.replaceChildren();
-    const first = element('option', 'Create a new user');
+    const first = element('option', t('Create a new user'));
     first.value = '';
     picker.append(first);
     for (const user of result.users) {
       const option = element(
         'option',
-        `${user.id} · ${user.roles.join(', ') || 'No access'}`,
+        `${user.id} · ${user.roles.join(', ') || t('No access')}`,
       );
       option.value = user.id;
       picker.append(option);
@@ -278,16 +311,22 @@
     picker.value = '';
     select('#user-fields').disabled = false;
     select('#reload-users').disabled = false;
-    select('#users-status').textContent =
-      `${result.users.length} users in ${result.application}. Required roles: ${result.requiredRoles.join(', ') || 'none'}. Reloading discards unsaved edits.`;
+    select('#users-status').textContent = t(
+      '{count} users in {application}. Required roles: {roles}. Reloading discards unsaved edits.',
+      {
+        count: result.users.length,
+        application: result.application,
+        roles: result.requiredRoles.join(', ') || t('none'),
+      },
+    );
     editUser();
   }
   function renderSessions(sessions) {
     const list = select('#session-list');
     list.replaceChildren();
     if (!currentSession.roles.includes('admin'))
-      return empty(list, 'Only administrators can manage active sessions.');
-    if (!sessions.length) return empty(list, 'No active sessions.');
+      return empty(list, t('Only administrators can manage active sessions.'));
+    if (!sessions.length) return empty(list, t('No active sessions.'));
     for (const session of sessions) {
       const row = element('article', undefined, 'record');
       const head = element('div', undefined, 'record-head');
@@ -296,7 +335,7 @@
         element(
           'span',
           session.id === currentSession.id
-            ? 'This session'
+            ? t('This session')
             : session.network.toUpperCase(),
           'badge',
         ),
@@ -306,12 +345,15 @@
         element('p', session.address),
         element(
           'p',
-          `Started ${date(session.createdAt)} · Expires ${date(session.expiresAt)}`,
+          t('Started {started} · Expires {expires}', {
+            started: date(session.createdAt),
+            expires: date(session.expiresAt),
+          }),
         ),
       );
       if (session.id !== currentSession.id)
         row.append(
-          button('Revoke session', () =>
+          button(t('Revoke session'), () =>
             mutate(`sessions/${session.id}/revoke`),
           ),
         );
@@ -338,27 +380,27 @@
     select('#user-picker').replaceChildren();
     select('#user-id').value = '';
     select('#user-roles').value = '';
-    select('#users-status').textContent = 'Administrator sign-in required.';
+    select('#users-status').textContent = t('Administrator sign-in required.');
     select('#action-fields').disabled = true;
     select('#invite-fields').disabled = true;
     select('#refresh-panel').disabled = true;
-    select('#connection-state').textContent = 'DISCONNECTED';
+    select('#connection-state').textContent = t('DISCONNECTED');
     select('#welcome').hidden = false;
     select('#invite-result').textContent = '';
     for (const id of ['invitations', 'pending', 'executed'])
       select(`#metric-${id}`).textContent = '—';
     empty(
       select('#action-list'),
-      'Sign in to see requests and create your first action.',
+      t('Sign in to see requests and create your first action.'),
     );
     empty(
       select('#invitation-list'),
-      'Administrator sign-in required to manage invitations.',
+      t('Administrator sign-in required to manage invitations.'),
     );
-    empty(select('#deployment-list'), 'No receipts loaded.');
+    empty(select('#deployment-list'), t('No receipts loaded.'));
     empty(
       select('#session-list'),
-      'Sign in as an administrator to manage sessions.',
+      t('Sign in as an administrator to manage sessions.'),
     );
   }
   async function refresh() {
@@ -375,8 +417,11 @@
     if (version !== refreshVersion || !window.gozneSession) return;
     currentSession = session;
     retryDelay = 30000;
-    select('#sync-status').textContent =
-      `Updated ${new Date().toLocaleTimeString()}`;
+    select('#sync-status').textContent = t('Updated {time}', {
+      time: window.GozneI18n
+        ? window.GozneI18n.formatTime(Date.now())
+        : new Date().toLocaleTimeString(),
+    });
     select('#action-fields').disabled = false;
     select('#invite-fields').disabled = !session.roles.includes('admin');
     select('#refresh-panel').disabled = false;
@@ -413,10 +458,12 @@
     select('#refresh-panel').disabled = !window.gozneSession;
     select('#sync-status').textContent =
       error.status === 401
-        ? 'Session ended'
-        : 'Connection interrupted; retrying';
-    select('#status').textContent =
-      `Could not load the workspace: ${error.message} Refresh or sign in again.`;
+        ? t('Session ended')
+        : t('Connection interrupted; retrying');
+    select('#status').textContent = t(
+      'Could not load the workspace: {message} Refresh or sign in again.',
+      { message: t(error.message) },
+    );
   }
   window.addEventListener('gozne:session', () => {
     refresh().catch(handleRefreshError).finally(scheduleRefresh);
@@ -432,7 +479,7 @@
     event.preventDefault();
     busy(async () => {
       if (!directory || !currentSession?.roles.includes('admin'))
-        throw new Error('Reload users from an administrator session.');
+        throw new Error(t('Reload users from an administrator session.'));
       const wallets = Array.from(
         select('#user-wallets').querySelectorAll('.wallet-row'),
         (row) => ({
@@ -456,11 +503,13 @@
         window.gozneSession = null;
         select('#session').hidden = true;
         window.dispatchEvent(new window.Event('gozne:session'));
-        select('#status').textContent =
-          'User saved. Policy changed; all sessions and temporary grants were invalidated. Sign in again.';
+        select('#status').textContent = t(
+          'User saved. Policy changed; all sessions and temporary grants were invalidated. Sign in again.',
+        );
       } else {
-        select('#users-status').textContent =
-          'No policy changes were needed. Your session remains active.';
+        select('#users-status').textContent = t(
+          'No policy changes were needed. Your session remains active.',
+        );
       }
     });
   });
@@ -470,8 +519,9 @@
       const data = new FormData(event.currentTarget);
       await mutate('actions', Object.fromEntries(data));
       await refresh();
-      select('#status').textContent =
-        'Request created. An administrator can now sign the exact deployment.';
+      select('#status').textContent = t(
+        'Request created. An administrator can now sign the exact deployment.',
+      );
     });
   });
   select('#invite-form').addEventListener('submit', (event) => {
@@ -487,15 +537,27 @@
       const result = select('#invite-result');
       result.replaceChildren(
         document.createTextNode(
-          `Invite created for ${short(invitation.address)} until ${date(invitation.expiresAt)}. Share this address: `,
+          t(
+            'Invite created for {address} until {expires}. Share this address: ',
+            {
+              address: short(invitation.address),
+              expires: date(invitation.expiresAt),
+            },
+          ),
         ),
       );
       const link = element('a', invitation.url);
       link.href = invitation.url;
       result.append(link);
-      select('#status').textContent =
-        'Invitation created. Only that wallet can use it; the link carries no access token.';
+      select('#status').textContent = t(
+        'Invitation created. Only that wallet can use it; the link carries no access token.',
+      );
     });
+  });
+  window.addEventListener('gozne:languagechange', () => {
+    if (window.gozneSession)
+      refresh().catch(handleRefreshError).finally(scheduleRefresh);
+    else signedOut();
   });
   refresh().catch(handleRefreshError).finally(scheduleRefresh);
 })();

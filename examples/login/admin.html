@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#101312" />
     <title>Gozne · Access, with intent.</title>
     <link rel="stylesheet" href="/style.css" />
+    <script src="/i18n.js" defer></script>
     <script src="/login.js" defer></script>
     <script src="/panel.js" defer></script>
     <script src="/applications.js" defer></script>
@@ -42,7 +43,10 @@
           <span class="muted">Gozne</span><span class="divider">/</span
           ><strong>Internal workspace</strong>
         </div>
-        <span class="pill">Private administration</span>
+        <div class="topbar-actions">
+          <div data-language-switcher></div>
+          <span class="pill">Private administration</span>
+        </div>
       </header>
       <main id="main">
         <div class="page-heading">

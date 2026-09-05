@@ -155,6 +155,8 @@ try {
     });
   const publicPage = await http('/');
   assert.equal(publicPage.status, 200);
+  assert.match(publicPage.text, /\/i18n\.js/);
+  assert.equal((await http('/i18n.js')).status, 200);
   assert.doesNotMatch(publicPage.text, /panel.js|Users &amp; wallets/);
   if (quique) {
     assert.match(publicPage.text, /app\.quique\.es/);
@@ -172,10 +174,10 @@ try {
     '/v1/auth/control%2fusers',
   ])
     assert.equal((await http(path)).status, 404, path);
-  assert.match(
-    (await http('/', { internal: true })).text,
-    /Users &amp; wallets/,
-  );
+  const adminPage = await http('/', { internal: true });
+  assert.match(adminPage.text, /Users &amp; wallets/);
+  assert.match(adminPage.text, /\/i18n\.js/);
+  assert.equal((await http('/i18n.js', { internal: true })).status, 200);
   const services = JSON.parse(compose('config', '--format', 'json')).services;
   assert.equal(services['admin-panel'].ports[0].host_ip, '127.0.0.1');
   assert.equal(services['admin-api'].ports, undefined);

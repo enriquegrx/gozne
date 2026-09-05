@@ -33,6 +33,12 @@ works and distinguish simulations from external effects. Document migrations and
 recovery implications when persistent state changes. Published migrations are
 immutable; add a new numbered migration instead of editing an old one.
 
+Browser interface copy must remain complete in English and Spanish. Add static
+and runtime text to the shared catalogue, format displayed dates with the locale
+helpers, and keep signed messages and protocol identifiers language-neutral.
+Follow the [internationalization guide](docs/15-INTERNATIONALIZATION.md) and its
+review checklist for every user-facing change.
+
 The distribution license is pending. Contact the maintainer before submitting a
 substantial contribution to clarify its terms.
 

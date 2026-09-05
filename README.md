@@ -66,6 +66,10 @@ request and approve their own action for a quick single-wallet test; this is
   invitations, requests and deployment receipts, active-session revocation and
   automatic updates. Built with local HTML, CSS and JavaScript, without a
   frontend framework or CDN.
+- 🌍 **English and Spanish interfaces:** browser detection, an explicit language
+  switcher, persistent preference and locale-aware dates across sign-in, the
+  protected workspace and administration. See the
+  [internationalization guide](docs/15-INTERNATIONALIZATION.md).
 - 🗃️ **SQLite and a CLI:** transactional migrations, policy administration,
   audit export, live backups and recovery.
 - 🐳 **A complete local setup:** non-root containers, Nginx and HTTPS on
@@ -200,6 +204,7 @@ imported. Keep `/v1/auth/validate` internal to the proxy.
 - [Architecture decisions](docs/07-DECISIONS.md) ·
   [Project provenance](docs/05-CLEAN-ORIGIN.md)
 - [QUIQUE.ES public and private deployment](docs/14-QUIQUE-DEPLOYMENT.md)
+- [Internationalization and translation workflow](docs/15-INTERNATIONALIZATION.md)
 - [Contributing](CONTRIBUTING.md) · [Reporting a vulnerability](SECURITY.md)
 
 The repository is public, but a distribution license has not been selected. No

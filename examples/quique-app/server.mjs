@@ -47,6 +47,7 @@ createServer((req, res) => {
     <meta name="theme-color" content="#fbf8f1">
     <title>app.quique.es · Workspace</title>
     <link rel="stylesheet" href="/style.css">
+    <script defer src="/i18n.js"></script>
     <script defer src="/workspace.js"></script>
   </head>
   <body class="app-shell">
@@ -58,6 +59,7 @@ createServer((req, res) => {
           <span>app.quique.es</span>
         </a>
         <div class="site-header__actions">
+          <div data-language-switcher></div>
           <span class="private-label"><span aria-hidden="true"></span>Wallet verified</span>
           <button id="logout" class="header-logout" type="button">Sign out</button>
         </div>
@@ -67,7 +69,7 @@ createServer((req, res) => {
     <main id="main" class="workspace">
       <section class="hero">
         <p class="eyebrow">PRIVATE WORKSPACE</p>
-        <h1>Welcome, ${escape(identity)}.</h1>
+        <h1 data-i18n="Welcome, {identity}." data-i18n-identity="${escape(identity)}">Welcome, ${escape(identity)}.</h1>
         <p class="muted">Your personal space, opened with your wallet.</p>
       </section>
       <div class="grid">

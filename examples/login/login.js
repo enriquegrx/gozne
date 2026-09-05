@@ -1,6 +1,17 @@
 /* global window, document */
 'use strict';
 
+const t = (source, values) => {
+  if (window.GozneI18n) return window.GozneI18n.t(source, values);
+  return source.replace(/\{([a-zA-Z]+)\}/g, (match, key) =>
+    Object.hasOwn(values || {}, key) ? String(values[key]) : match,
+  );
+};
+const formatTime = (value) =>
+  window.GozneI18n
+    ? window.GozneI18n.formatTime(value)
+    : new Date(value).toLocaleTimeString();
+
 const status = document.querySelector('#status');
 const sessionPanel = document.querySelector('#session');
 const walletSelect = document.querySelector('#evm-wallet');
@@ -41,7 +52,7 @@ function enableWalletButton(button, key) {
     typeof button.querySelector === 'function'
       ? button.querySelector('[data-wallet-state]')
       : null;
-  if (state) state.textContent = 'Detected';
+  if (state) state.textContent = t('Detected');
   if (wiredWalletButtons.has(button)) return;
   wiredWalletButtons.add(button);
   button.addEventListener('click', () => selectWallet(key));
@@ -62,13 +73,13 @@ function createWalletButton(key, name) {
   const title = document.createElement('strong');
   title.textContent = name;
   const detail = document.createElement('small');
-  detail.textContent = 'EVM browser wallet';
+  detail.textContent = t('EVM browser wallet');
   copy.append(title, detail);
 
   const state = document.createElement('span');
   state.className = 'wallet-state';
   state.dataset.walletState = '';
-  state.textContent = 'Detected';
+  state.textContent = t('Detected');
 
   const arrow = document.createElement('span');
   arrow.className = 'wallet-arrow';
@@ -114,8 +125,9 @@ function discoverWallets() {
 }
 document.querySelector('#refresh-wallets').addEventListener('click', () => {
   discoverWallets();
-  status.textContent =
-    'Looking for wallets. If yours is missing, enable it for this site and reload.';
+  status.textContent = t(
+    'Looking for wallets. If yours is missing, enable it for this site and reload.',
+  );
 });
 discoverWallets();
 
@@ -132,7 +144,7 @@ async function api(path, body, headers = {}) {
   const result = await response.json();
   if (!response.ok) {
     const error = new Error(
-      result.error?.message ?? 'The request could not be completed.',
+      t(result.error?.message ?? 'The request could not be completed.'),
     );
     error.status = response.status;
     throw error;
@@ -146,8 +158,14 @@ function showSession(session) {
   window.gozneSession = session;
   window.dispatchEvent(new window.Event('gozne:session'));
   sessionPanel.hidden = false;
-  if (connectionState) connectionState.textContent = 'Connected';
-  status.textContent = `Signed in as ${session.identity}. Session expires at ${new Date(session.expiresAt).toLocaleTimeString()}.`;
+  if (connectionState) connectionState.textContent = t('Connected');
+  status.textContent = t(
+    'Signed in as {identity}. Session expires at {time}.',
+    {
+      identity: session.identity,
+      time: formatTime(session.expiresAt),
+    },
+  );
 }
 async function busy(operation) {
   if (operationPending) return;
@@ -158,12 +176,13 @@ async function busy(operation) {
     previous.set(button, button.disabled);
     button.disabled = true;
   });
-  status.textContent =
-    'Working… Review your wallet if a signature is requested.';
+  status.textContent = t(
+    'Working… Review your wallet if a signature is requested.',
+  );
   try {
     await operation();
   } catch (error) {
-    status.textContent = error.message || 'Sign-in failed.';
+    status.textContent = t(error.message || 'Sign-in failed.');
   } finally {
     buttons.forEach((button) => {
       button.disabled = previous.get(button);
@@ -179,7 +198,9 @@ document.querySelector('#evm').addEventListener('click', () =>
     const provider = providers.get(walletSelect.value);
     if (!provider?.request)
       throw new Error(
-        'Select a detected wallet. Another wallet will never be opened in its place.',
+        t(
+          'Select a detected wallet. Another wallet will never be opened in its place.',
+        ),
       );
     const [address] = await provider.request({ method: 'eth_requestAccounts' });
     const chainId = BigInt(
@@ -215,7 +236,7 @@ document.querySelector('#solana').addEventListener('click', () =>
     const provider = window.phantom?.solana;
     if (!provider?.signIn)
       throw new Error(
-        'This demo needs Phantom with Sign-In With Solana support.',
+        t('This demo needs Phantom with Sign-In With Solana support.'),
       );
     const connected = await provider.connect();
     const address = connected.publicKey.toString();
@@ -244,17 +265,18 @@ document.querySelector('#logout').addEventListener('click', () =>
     window.gozneSession = null;
     window.dispatchEvent(new window.Event('gozne:session'));
     sessionPanel.hidden = true;
-    if (connectionState) connectionState.textContent = 'Not connected';
+    if (connectionState) connectionState.textContent = t('Not connected');
     applicationInput.readOnly = false;
-    status.textContent = 'Signed out.';
+    status.textContent = t('Signed out.');
   }),
 );
 api('me')
   .then(async (session) => {
     if (session.application && session.application !== requestedApplication) {
       await api('logout', {}, { 'X-CSRF-Token': session.csrfToken });
-      status.textContent =
-        'Application changed. Sign in to start a separate session.';
+      status.textContent = t(
+        'Application changed. Sign in to start a separate session.',
+      );
     } else showSession(session);
   })
   .catch(() => {
@@ -268,3 +290,7 @@ window.gozne = {
   walletSelect,
   isBusy: () => operationPending,
 };
+
+window.addEventListener('gozne:languagechange', () => {
+  if (window.gozneSession) showSession(window.gozneSession);
+});

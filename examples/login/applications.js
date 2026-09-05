@@ -3,6 +3,7 @@
 (() => {
   const { api, busy } = window.gozne;
   const el = (id) => document.querySelector(id);
+  const t = (source) => window.GozneI18n?.t(source) ?? source;
   let directory = null;
   let loadedSession = null;
   const split = (value) =>
@@ -32,15 +33,19 @@
     el('#application-fields').disabled = !result.canManage;
     el('#reload-applications').disabled = false;
     el('#applications-status').textContent = result.canManage
-      ? 'Application manager access. Select an application to edit its configuration.'
-      : 'Your accessible applications. Configuration requires an application manager.';
+      ? t(
+          'Application manager access. Select an application to edit its configuration.',
+        )
+      : t(
+          'Your accessible applications. Configuration requires an application manager.',
+        );
     const list = el('#application-list');
     list.replaceChildren();
     const picker = el('#application-picker');
     picker.replaceChildren();
     const create = document.createElement('option');
     create.value = '';
-    create.textContent = 'New application';
+    create.textContent = t('New application');
     picker.append(create);
     for (const app of result.applications) {
       const option = document.createElement('option');
@@ -55,8 +60,8 @@
         button.className = 'secondary';
         button.textContent =
           app.id === session.application
-            ? 'Current workspace'
-            : 'Open workspace';
+            ? t('Current workspace')
+            : t('Open workspace');
         button.disabled = app.id === session.application;
         button.addEventListener('click', () =>
           busy(async () => {
@@ -95,8 +100,9 @@
         'app-solana',
       ])
         el(`#${id}`).value = '';
-      el('#applications-status').textContent =
-        'Sign in to see your applications.';
+      el('#applications-status').textContent = t(
+        'Sign in to see your applications.',
+      );
     } else if (loadedSession !== window.gozneSession.id)
       load().catch((error) => {
         el('#applications-status').textContent = error.message;
@@ -108,7 +114,7 @@
     event.preventDefault();
     busy(async () => {
       if (!directory?.canManage || !window.gozneSession)
-        throw new Error('Application manager access required.');
+        throw new Error(t('Application manager access required.'));
       const result = await api(
         'control/applications',
         {
@@ -130,13 +136,21 @@
         el('#session').hidden = true;
         el('#application-id').readOnly = false;
         window.dispatchEvent(new window.Event('gozne:session'));
-        el('#status').textContent =
-          'Application saved. Sign in again; all sessions and temporary grants were invalidated.';
-      } else el('#applications-status').textContent = 'No changes were needed.';
+        el('#status').textContent = t(
+          'Application saved. Sign in again; all sessions and temporary grants were invalidated.',
+        );
+      } else
+        el('#applications-status').textContent = t('No changes were needed.');
     });
   });
   if (window.gozneSession)
     load().catch((error) => {
       el('#applications-status').textContent = error.message;
     });
+  window.addEventListener('gozne:languagechange', () => {
+    if (window.gozneSession)
+      load().catch((error) => {
+        el('#applications-status').textContent = error.message;
+      });
+  });
 })();

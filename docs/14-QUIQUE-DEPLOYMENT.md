@@ -61,6 +61,13 @@ public entrance for the private control surface.
 The implementation remains local HTML, CSS and JavaScript. It uses no frontend
 framework, remote font, analytics script or CDN asset.
 
+The public door, protected workspace and internal panel are available in English
+and Spanish. The browser language chooses the initial locale and the header
+switcher stores an explicit preference. Human-readable status messages and dates
+follow that choice; wallet challenges and signed payloads remain canonical. The
+maintenance rules are in the
+[internationalization guide](15-INTERNATIONALIZATION.md).
+
 ## TLS and renewal 🔒
 
 Cloudflare supplies the public edge certificate for `app.quique.es`. The private
