@@ -1,11 +1,14 @@
 # quique.es workspace integration
 
 A small independent HTTP application protected by Gozne, with the ivory, ink and
-amber visual style of QUIQUE.ES. The brand symbol is supplied from the owner's
-QUIQUE.ES project. The public login uses Gozne wallet discovery. The private
-workspace displays the verified identity, roles, wallet and session expiry, and
-supports logout. It is a starting workspace, not a business application with
-invented data or deployments.
+amber visual style shared by quique.es and pass.quique.es. Its public access
+screen reuses the family header and footer, removes the decorative grid and
+presents every detected wallet as a direct sign-in choice. Rabby and MetaMask
+have dedicated entries; other EIP-6963 browser wallets are added automatically.
+Phantom signs in on Solana mainnet. The private workspace displays the verified
+identity, roles, wallet and session expiry, and supports logout. It is a
+starting workspace, not a business application with invented data or
+deployments.
 
 `server.mjs` imports only Node's HTTP module. It verifies no wallet signatures,
 reads no cookies and imports no Gozne libraries. The isolated proxy supplies
@@ -49,6 +52,10 @@ sign-in, real protected workspace HTML, denial without a session, forged-header
 removal, private management, revocation, logout, backup/restore and gateway
 failure. It also verifies the deployment diagnostic and public/private route
 separation. Temporary test state is removed afterward.
+
+The quique policy intentionally accepts Solana mainnet only in both preview and
+production. Authentication signs a SIWS message and does not submit a
+transaction or incur a fee.
 
 ## Target server deployment (prepared, not activated by the local preview)
 

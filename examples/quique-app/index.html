@@ -3,71 +3,174 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>quique.es · Private workspace</title>
+    <meta name="theme-color" content="#fbf8f1" />
+    <title>app.quique.es · Wallet access</title>
     <meta name="gozne-application" content="quique" />
     <link rel="stylesheet" href="/style.css" />
     <script src="/login.js" defer></script>
   </head>
-  <body class="login-page">
-    <main id="main" class="login-shell">
-      <a class="brand" href="/"
-        ><img
-          src="/brand/symbol.png"
-          alt=""
-          width="48"
-          height="48"
-        />quique.es</a
-      >
-      <div class="page-heading">
-        <div>
-          <p class="eyebrow">PRIVATE WORKSPACE</p>
-          <h1>Your space.<br />Your access.</h1>
-          <p class="muted">Use your wallet to enter your personal workspace.</p>
+  <body class="app-shell">
+    <a class="skip-link" href="#main">Skip to wallet access</a>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a
+          class="site-wordmark"
+          href="https://quique.es/en/"
+          aria-label="Go to quique.es"
+        >
+          <span class="site-wordmark__mark" aria-hidden="true"></span>
+          <span>app.quique.es</span>
+        </a>
+        <div class="site-header__actions">
+          <span class="private-label"
+            ><span aria-hidden="true"></span>Private access</span
+          >
+          <a class="site-header__link" href="https://quique.es/en/"
+            >quique.es ↗</a
+          >
         </div>
       </div>
-      <section class="card wallet-card">
-        <div class="section-heading">
-          <h2>Your wallet</h2>
-          <span id="connection-state" class="tag">DISCONNECTED</span>
-        </div>
-        <p class="muted">Choose the extension you want to use.</p>
-        <input id="application-id" type="hidden" value="quique" /><label
-          for="evm-wallet"
-          >EVM wallet</label
-        ><select id="evm-wallet" aria-describedby="evm-help">
-          <option value="">Choose a wallet</option>
-          <option id="wallet-rabby" value="io.rabby" disabled>
-            Rabby · not detected
-          </option>
-          <option id="wallet-metamask" value="io.metamask" disabled>
-            MetaMask · not detected
-          </option>
-        </select>
-        <p id="evm-help" class="note">
-          Compatible browser wallets appear automatically. Your selection is
-          always respected.
-        </p>
-        <button id="evm" type="button">Sign in with EVM ↗</button
-        ><button id="refresh-wallets" class="text-button" type="button">
-          Discover wallets
-        </button>
-        <div class="or"><span>or use Solana</span></div>
-        <label for="solana-chain">Solana network</label
-        ><select id="solana-chain">
-          <option value="solana:mainnet">Mainnet</option>
-          <option value="solana:devnet">Devnet</option></select
-        ><button id="solana" class="secondary" type="button">
-          Sign in with Phantom
-        </button>
-        <p id="status" role="status" aria-live="polite">
-          Connect an authorized wallet to begin.
-        </p>
-        <div id="session" hidden>
-          <a class="app-link" href="/private/">Open protected application ↗</a
-          ><button id="logout" class="secondary" type="button">Sign out</button>
-        </div>
-      </section>
-      <footer>Your keys stay in your wallet.</footer>
+    </header>
+
+    <main id="main" class="auth-main">
+      <div class="auth-layout">
+        <section class="auth-intro" aria-labelledby="page-title">
+          <p class="eyebrow">WALLET-GATED WORKSPACE</p>
+          <h1 id="page-title">Your space.<br />Your keys.</h1>
+          <p>
+            Access your private workspace with a wallet already authorized by
+            quique.es. You will sign a message—never a transaction.
+          </p>
+          <ul class="trust-list" aria-label="Authentication guarantees">
+            <li><span aria-hidden="true">01</span>No password to store</li>
+            <li><span aria-hidden="true">02</span>No gas or network fee</li>
+            <li>
+              <span aria-hidden="true">03</span>Your keys never leave the wallet
+            </li>
+          </ul>
+        </section>
+
+        <section class="wallet-panel" aria-labelledby="wallet-title">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">SIGN IN</p>
+              <h2 id="wallet-title">Choose your wallet</h2>
+            </div>
+            <span id="connection-state" class="connection-state"
+              >Not connected</span
+            >
+          </div>
+
+          <input id="application-id" type="hidden" value="quique" />
+          <select id="evm-wallet" hidden aria-label="Detected EVM wallet">
+            <option value="">Choose a wallet</option>
+            <option id="wallet-rabby" value="io.rabby" disabled>
+              Rabby · not detected
+            </option>
+            <option id="wallet-metamask" value="io.metamask" disabled>
+              MetaMask · not detected
+            </option>
+          </select>
+          <button id="evm" type="button" hidden>Sign in with EVM</button>
+
+          <div class="network-heading">
+            <span class="network-name"
+              ><img src="/wallets/ethereum.svg" alt="" />Ethereum</span
+            >
+            <span class="network-badge">MAINNET · EVM</span>
+          </div>
+          <div class="wallet-list">
+            <button
+              id="wallet-rabby-card"
+              class="wallet-option"
+              type="button"
+              disabled
+            >
+              <img src="/wallets/rabby.svg" alt="" />
+              <span class="wallet-copy"
+                ><strong>Rabby</strong><small>Browser wallet</small></span
+              >
+              <span class="wallet-state" data-wallet-state>Not detected</span>
+              <span class="wallet-arrow" aria-hidden="true">↗</span>
+            </button>
+            <button
+              id="wallet-metamask-card"
+              class="wallet-option"
+              type="button"
+              disabled
+            >
+              <img src="/wallets/metamask.svg" alt="" />
+              <span class="wallet-copy"
+                ><strong>MetaMask</strong><small>Browser wallet</small></span
+              >
+              <span class="wallet-state" data-wallet-state>Not detected</span>
+              <span class="wallet-arrow" aria-hidden="true">↗</span>
+            </button>
+            <div id="evm-wallet-list"></div>
+          </div>
+          <p class="wallet-help">
+            Any EIP-6963 compatible browser wallet will appear here.
+            <button id="refresh-wallets" class="inline-button" type="button">
+              Scan again
+            </button>
+          </p>
+
+          <div class="section-divider" aria-hidden="true"></div>
+          <input id="solana-chain" type="hidden" value="solana:mainnet" />
+          <div class="network-heading">
+            <span class="network-name"
+              ><img src="/wallets/solana.svg" alt="" />Solana</span
+            >
+            <span class="network-badge">MAINNET</span>
+          </div>
+          <button id="solana" class="wallet-option" type="button">
+            <img src="/wallets/phantom.svg" alt="" />
+            <span class="wallet-copy"
+              ><strong>Phantom</strong><small>Solana wallet</small></span
+            >
+            <span class="wallet-state">Open wallet</span>
+            <span class="wallet-arrow" aria-hidden="true">↗</span>
+          </button>
+
+          <p id="status" class="status" role="status" aria-live="polite">
+            Select an authorized wallet to continue.
+          </p>
+          <div id="session" class="session" hidden>
+            <a class="app-link" href="/private/">Open your workspace ↗</a>
+            <button id="logout" class="logout-button" type="button">
+              Sign out
+            </button>
+          </div>
+        </section>
+      </div>
     </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__meta">
+        <p class="site-footer__years" aria-label="2012 to 2026">
+          <time datetime="2012">2012</time><span aria-hidden="true">—</span
+          ><time datetime="2026">2026</time>
+        </p>
+        <span class="site-footer__separator" aria-hidden="true">·</span>
+        <a class="site-footer__link" href="https://quique.es/en/">quique.es</a>
+        <span class="site-footer__separator" aria-hidden="true">·</span>
+        <a class="site-footer__link" href="https://pass.quique.es">pass</a>
+        <span class="site-footer__separator" aria-hidden="true">·</span>
+        <a class="site-footer__link" href="https://quique.es/en/security/"
+          >Security</a
+        >
+        <span class="site-footer__separator" aria-hidden="true">·</span>
+        <a class="site-footer__link" href="https://quique.es/en/message/"
+          >Contact</a
+        >
+        <span class="site-footer__separator" aria-hidden="true">·</span>
+        <a class="site-footer__link" href="https://quique.es/en/inbox/"
+          >Inbox</a
+        >
+      </div>
+      <p class="site-footer__privacy">
+        Authentication cookie only. No invasive tracking.
+      </p>
+    </footer>
   </body>
 </html>

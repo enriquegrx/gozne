@@ -56,6 +56,7 @@ services:
       - ./routes.conf:/etc/nginx/gozne-routes.conf:ro
       - ./index.html:/usr/share/nginx/html/index.html:ro
       - ./brand/symbol.png:/usr/share/nginx/html/brand/symbol.png:ro
+      - ./wallets:/usr/share/nginx/html/wallets:ro
       - ./workspace.js:/usr/share/nginx/html/workspace.js:ro
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ./style.css:/usr/share/nginx/html/style.css:ro

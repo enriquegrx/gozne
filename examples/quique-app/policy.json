@@ -7,7 +7,7 @@
       "origin": "https://app.quique.orb.local",
       "adminOrigin": "https://127.0.0.1:9543",
       "evmChainIds": [1],
-      "solanaChains": ["solana:mainnet", "solana:devnet"],
+      "solanaChains": ["solana:mainnet"],
       "requiredRoles": ["reader"]
     }
   ],

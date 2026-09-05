@@ -7,7 +7,7 @@
       "origin": "https://app.quique.es",
       "adminOrigin": "https://gozne.quique.es",
       "evmChainIds": [1],
-      "solanaChains": ["solana:mainnet", "solana:devnet"],
+      "solanaChains": ["solana:mainnet"],
       "requiredRoles": ["reader"]
     }
   ],

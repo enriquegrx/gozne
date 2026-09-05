@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Solana">
+  <defs><linearGradient id="s" x1="10" y1="54" x2="54" y2="10" gradientUnits="userSpaceOnUse"><stop stop-color="#9945ff"/><stop offset="1" stop-color="#14f195"/></linearGradient></defs>
+  <path fill="url(#s)" d="M17 10h39l-9 10H8l9-10Zm-9 17h39l9 10H17L8 27Zm9 17h39L47 54H8l9-10Z"/>
+</svg>

@@ -20,6 +20,66 @@ const walletOptions = new Map([
   ['io.rabby', document.querySelector('#wallet-rabby')],
   ['io.metamask', document.querySelector('#wallet-metamask')],
 ]);
+const walletButtons = new Map([
+  ['io.rabby', document.querySelector('#wallet-rabby-card')],
+  ['io.metamask', document.querySelector('#wallet-metamask-card')],
+]);
+const wiredWalletButtons = new WeakSet();
+const walletList = document.querySelector('#evm-wallet-list');
+const evmButton = document.querySelector('#evm');
+const connectionState = document.querySelector('#connection-state');
+
+function selectWallet(key) {
+  walletSelect.value = key;
+  evmButton.click();
+}
+
+function enableWalletButton(button, key) {
+  if (!button) return;
+  button.disabled = false;
+  const state =
+    typeof button.querySelector === 'function'
+      ? button.querySelector('[data-wallet-state]')
+      : null;
+  if (state) state.textContent = 'Detected';
+  if (wiredWalletButtons.has(button)) return;
+  wiredWalletButtons.add(button);
+  button.addEventListener('click', () => selectWallet(key));
+}
+
+function createWalletButton(key, name) {
+  if (!walletList) return null;
+  const button = document.createElement('button');
+  button.className = 'wallet-option';
+  button.type = 'button';
+
+  const icon = document.createElement('img');
+  icon.src = '/wallets/ethereum.svg';
+  icon.alt = '';
+
+  const copy = document.createElement('span');
+  copy.className = 'wallet-copy';
+  const title = document.createElement('strong');
+  title.textContent = name;
+  const detail = document.createElement('small');
+  detail.textContent = 'EVM browser wallet';
+  copy.append(title, detail);
+
+  const state = document.createElement('span');
+  state.className = 'wallet-state';
+  state.dataset.walletState = '';
+  state.textContent = 'Detected';
+
+  const arrow = document.createElement('span');
+  arrow.className = 'wallet-arrow';
+  arrow.ariaHidden = 'true';
+  arrow.textContent = '↗';
+  button.append(icon, copy, state, arrow);
+  walletList.append(button);
+  walletButtons.set(key, button);
+  return button;
+}
+
 window.addEventListener('eip6963:announceProvider', (event) => {
   const { info, provider } = event.detail ?? {};
   if (
@@ -44,6 +104,10 @@ window.addEventListener('eip6963:announceProvider', (event) => {
       : 'MetaMask'
     : String(info.name).slice(0, 80);
   option.disabled = false;
+  const walletButton =
+    walletButtons.get(key) ??
+    createWalletButton(key, String(info.name).slice(0, 80));
+  enableWalletButton(walletButton, key);
 });
 function discoverWallets() {
   window.dispatchEvent(new window.Event('eip6963:requestProvider'));
@@ -82,6 +146,7 @@ function showSession(session) {
   window.gozneSession = session;
   window.dispatchEvent(new window.Event('gozne:session'));
   sessionPanel.hidden = false;
+  if (connectionState) connectionState.textContent = 'Connected';
   status.textContent = `Signed in as ${session.identity}. Session expires at ${new Date(session.expiresAt).toLocaleTimeString()}.`;
 }
 async function busy(operation) {
@@ -179,6 +244,7 @@ document.querySelector('#logout').addEventListener('click', () =>
     window.gozneSession = null;
     window.dispatchEvent(new window.Event('gozne:session'));
     sessionPanel.hidden = true;
+    if (connectionState) connectionState.textContent = 'Not connected';
     applicationInput.readOnly = false;
     status.textContent = 'Signed out.';
   }),

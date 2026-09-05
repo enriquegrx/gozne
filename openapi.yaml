@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.9
+  version: 0.1.0-dev.10
   description:
     Alpha EVM/SIWS authentication and signed simulation controls. API and login
     require the same HTTPS origin within each surface. Control paths exist only

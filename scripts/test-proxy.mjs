@@ -54,7 +54,7 @@ const policy = {
       origin,
       adminOrigin,
       evmChainIds: [1],
-      solanaChains: ['solana:devnet'],
+      solanaChains: [quique ? 'solana:mainnet' : 'solana:devnet'],
       requiredRoles: ['reader'],
     },
   ],
@@ -153,8 +153,16 @@ try {
       req.setTimeout(5000, () => req.destroy(new Error('HTTP timeout')));
       req.end(payload);
     });
-  assert.equal((await http('/')).status, 200);
-  assert.doesNotMatch((await http('/')).text, /panel.js|Users &amp; wallets/);
+  const publicPage = await http('/');
+  assert.equal(publicPage.status, 200);
+  assert.doesNotMatch(publicPage.text, /panel.js|Users &amp; wallets/);
+  if (quique) {
+    assert.match(publicPage.text, /app\.quique\.es/);
+    assert.match(publicPage.text, /solana:mainnet/);
+    assert.doesNotMatch(publicPage.text, /solana:devnet/i);
+    for (const wallet of ['ethereum', 'solana', 'rabby', 'metamask', 'phantom'])
+      assert.equal((await http('/wallets/' + wallet + '.svg')).status, 200);
+  }
   for (const path of [
     '/panel.js',
     '/applications.js',
@@ -199,7 +207,7 @@ try {
         application,
         network: solana ? 'solana' : 'evm',
         address: solana ? solAddress : wallet.address,
-        chainId: solana ? 'solana:devnet' : '1',
+        chainId: solana ? (quique ? 'solana:mainnet' : 'solana:devnet') : '1',
       },
     });
     assert.equal(nonce.status, 200, nonce.text);
@@ -223,13 +231,26 @@ try {
       session: JSON.parse(verified.text),
     };
   }
+  if (quique) {
+    const deniedDevnet = await http('/v1/auth/nonce', {
+      body: {
+        application,
+        network: 'solana',
+        address: solAddress,
+        chainId: 'solana:devnet',
+      },
+    });
+    assert.equal(deniedDevnet.status, 400);
+    assert.equal(JSON.parse(deniedDevnet.text).error.code, 'CHAIN_DENIED');
+  }
   for (const network of ['evm', 'solana']) {
     const nonce = await http('/v1/auth/nonce', {
       body: {
         application,
         network,
         address: network === 'evm' ? eth.address : solAddress,
-        chainId: network === 'evm' ? '1' : 'solana:devnet',
+        chainId:
+          network === 'evm' ? '1' : quique ? 'solana:mainnet' : 'solana:devnet',
       },
     });
     assert.equal(nonce.status, 200, nonce.text);
@@ -259,6 +280,8 @@ try {
     if (quique) {
       assert.match(inside.text, /Welcome, tester/);
       assert.match(inside.text, /reader,admin/);
+      assert.match(inside.text, /app\.quique\.es/);
+      assert.match(inside.text, /Authentication cookie only/);
       assert.doesNotMatch(inside.text, /attacker|forged/);
     } else {
       const result = JSON.parse(inside.text);
