@@ -4,6 +4,7 @@ import type { Config } from '../config.js';
 import {
   administrationCapability,
   approvalThresholdCapability,
+  auditChainCapability,
   authenticationCapabilities,
   version,
 } from '../metadata.js';
@@ -114,6 +115,7 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
             ...authenticationCapabilities,
             administrationCapability,
             approvalThresholdCapability,
+            auditChainCapability,
           ]
         : authenticationCapabilities,
   }));

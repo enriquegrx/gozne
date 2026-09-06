@@ -28,7 +28,7 @@ test('health, version and unconfigured authentication expose the expected contra
   assert.notEqual(health.headers['x-request-id'], 'client-controlled');
   assert.deepEqual((await app.inject('/version')).json(), {
     name: 'gozne',
-    version: '0.1.0-dev.14',
+    version: '0.1.0-dev.15',
     stage: 'alpha',
     surface: 'public',
     authentication: true,
@@ -76,6 +76,7 @@ test('admin version metadata advertises approval thresholds only on the private 
     'forward-auth.request.v1',
     'control.admin.v1',
     'control.approval-threshold.v1',
+    'audit.export-chain.v1',
   ]);
 });
 

@@ -2,6 +2,7 @@ import { ConfigError } from '../src/config.js';
 import { identifier, readPolicyFile } from '../src/policy/policy.js';
 import { canonicalAddress } from '../src/wallets/proofs.js';
 import type { AuthStore } from '../src/auth/store.js';
+import { sealAudit } from '../src/audit/export.js';
 
 export function administration(store: AuthStore, args: string[]): unknown {
   const [area, action, ...rest] = args;
@@ -17,7 +18,7 @@ export function administration(store: AuthStore, args: string[]): unknown {
   )
     return { revoked: store.revoke(rest[0]!) };
   if (area === 'audit' && action === 'export' && !rest.length)
-    return { events: store.exportAudit() };
+    return sealAudit(store.exportAudit());
   const current = store.policy();
   if (!current) throw new ConfigError('Apply a policy first');
   const policy = structuredClone(current.policy);

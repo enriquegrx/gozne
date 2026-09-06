@@ -1,6 +1,7 @@
 import {
   administrationCapability,
   approvalThresholdCapability,
+  auditChainCapability,
   authenticationCapabilities,
 } from '../metadata.js';
 
@@ -140,7 +141,11 @@ export function versionMetadataFinding(
   const required = [
     ...authenticationCapabilities,
     ...(surface === 'admin'
-      ? [administrationCapability, approvalThresholdCapability]
+      ? [
+          administrationCapability,
+          approvalThresholdCapability,
+          auditChainCapability,
+        ]
       : []),
   ];
   const missing = required.filter((entry) => !capabilities.includes(entry));

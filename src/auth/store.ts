@@ -441,8 +441,8 @@ export class AuthStore {
   exportAudit() {
     return this.db
       .prepare(
-        'SELECT at, event, identity, session_id AS sessionId, application FROM audit ORDER BY sequence',
+        'SELECT sequence, at, event, identity, session_id AS sessionId, application FROM audit ORDER BY sequence',
       )
-      .all();
+      .all() as unknown as import('../audit/export.js').AuditEvent[];
   }
 }

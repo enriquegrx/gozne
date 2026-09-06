@@ -1,6 +1,6 @@
 {
   "name": "gozne",
-  "version": "0.1.0-dev.14",
+  "version": "0.1.0-dev.15",
   "description": "Self-hosted wallet authentication and signed action approvals",
   "private": true,
   "license": "UNLICENSED",

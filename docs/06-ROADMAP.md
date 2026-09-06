@@ -33,6 +33,7 @@ deployment, require multiple approvers or provide cross-domain SSO.
 - [x] Read-only deployment diagnostics and TLS expiry checks.
 - [x] Operator-controlled application definitions and workspace switching.
 - [x] Configurable multi-person approval thresholds for sensitive actions.
+- [x] Hash-chained audit exports with offline digest verification.
 - [x] Independent QUIQUE.ES workspace integration with full HTTPS tests.
 - [x] Extract the QUIQUE.ES product source into its own local project while
       preserving the mandatory Gozne contract.

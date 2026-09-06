@@ -51,8 +51,9 @@ running version, `public` or `admin` surface, and stable capability identifiers.
 Integrations that need method-aware writes must require
 `forward-auth.request.v1` before switching their protected upstream. The admin
 surface additionally advertises `control.admin.v1` and
-`control.approval-threshold.v1`. Unknown capabilities must be ignored so Gozne
-can add compatible behavior without breaking consumers.
+`control.approval-threshold.v1`. The operator build also reports
+`audit.export-chain.v1`. Unknown capabilities must be ignored so Gozne can add
+compatible behavior without breaking consumers.
 
 This endpoint reports code capabilities, not operational readiness. Check
 `/healthz`, validate the deployment topology, and complete a real authenticated

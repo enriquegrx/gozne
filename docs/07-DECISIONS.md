@@ -128,6 +128,14 @@ same identity cannot satisfy a multi-person rule. Every recorded approval must
 still have a live administrator session at execution time. The default remains
 one for compatibility with existing policy files.
 
+## D-017 — Audit export integrity uses an external digest
+
+Implemented. The operator export orders events by database sequence and builds a
+deterministic SHA-256 chain with a final digest. Offline verification detects
+record edits, deletion and reordering when that digest is retained through a
+separate trusted channel. Gozne does not claim this unsigned export proves the
+honesty of the source database or an operator who controls both copies.
+
 ## Separate public authentication from private administration
 
 `GOZNE_SURFACE` selects which API surface a process serves; the default is

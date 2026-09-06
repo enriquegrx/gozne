@@ -99,5 +99,11 @@ review, browser compatibility evidence and broader failure testing. Current
 checks do not constitute a cryptographic audit or a complete production
 assessment.
 
+CLI audit exports contain a deterministic SHA-256 chain. With the final digest
+stored through a separate trusted channel, later edits, deletion and reordering
+are detectable. This is an integrity check for the exported snapshot, not a
+signature or proof against an operator who controls both the database and the
+trusted digest.
+
 See [verification](10-VERIFICATION.md) for exercised scenarios and limitations.
 Report vulnerabilities through [SECURITY.md](../SECURITY.md).

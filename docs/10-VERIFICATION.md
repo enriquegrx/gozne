@@ -1,5 +1,12 @@
 # Verification and alpha evidence
 
+The Research Lab milestone 4 cross-repository HTTPS run on 6 September 2026 also
+verified the unchanged Gozne boundary for accounting: a reader forging `admin`
+was denied, while an authenticated admin recorded an exact balanced
+funding/allocation and a reader retrieved the exact fund totals. The same run
+retained the existing origin, CSRF, header sanitation, evidence streaming,
+logout and revocation checks.
+
 Pushes and pull requests run formatting, lint, compilation, tests, dependency
 audit, secret scanning and HTTPS integration on Linux. Installation uses the
 lockfile without lifecycle scripts. Images and CI actions are pinned by digest
@@ -21,6 +28,10 @@ browser isolation, expiry, application roles, CSRF and forged headers. It forces
 session/audit write failures and a SQLite writer lock, checking that
 transactions leave no partial nonce consumption or successful cookie. Failed
 policy or logout audit writes preserve prior state.
+
+Audit export tests verify deterministic sealing, offline CLI operation, an
+externally supplied digest and rejection of edited, deleted or reordered event
+records.
 
 Control tests cover wallet-bound invitation login, wrong-wallet rejection, guest
 restrictions, cross-application isolation, fresh signatures, altered payload

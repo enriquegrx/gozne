@@ -96,6 +96,7 @@ wallet disable evm ADDRESS
 session list
 session revoke SESSION_ID
 audit export
+audit verify FILE [EXPECTED_SHA256]
 database backup NEW_FILE
 database restore BACKUP NEW_FILE
 doctor
@@ -106,9 +107,18 @@ are public audit identifiers, not usable cookies. Policy changes invalidate all
 sessions, invitations and pending approvals. An identical policy import is a
 no-op; CLI edits detect concurrent changes.
 
-`audit export` includes each event's application where it is known. Interactive
-administrators see only their current application's events through the private
-API and panel. The database keeps at most 50,000 audit rows and removes rows
+`audit export --json` includes each event's sequence and application, a SHA-256
+chain entry for every record and a `finalDigest`. Store the JSON and final
+digest in separate systems, then run `audit verify FILE EXPECTED_SHA256 --json`
+before using the archive. Verification is offline and does not open the Gozne
+database. It detects modified, deleted or reordered records after export when
+the expected digest comes from a trusted copy.
+
+The seal does not prove that the source database or exporting operator was
+honest: anyone who can replace both the file and the trusted digest can create a
+new internally valid chain. Interactive administrators see only their current
+application's events through the private API and panel. The CLI export covers
+the instance. The database keeps at most 50,000 audit rows and removes rows
 older than 30 days as new events are written; export to an external archive when
 longer retention is required.
 

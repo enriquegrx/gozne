@@ -72,7 +72,7 @@ application when an operation must be reviewed by more than one person.
   protected workspace and administration. See the
   [internationalization guide](docs/15-INTERNATIONALIZATION.md).
 - 🗃️ **SQLite and a CLI:** transactional migrations, policy administration,
-  audit export, live backups and recovery.
+  hash-chained audit exports, live backups and recovery.
 - 🐳 **A complete local setup:** non-root containers, Nginx and HTTPS on
   OrbStack.
 - 🧪 **Checks that exercise failures:** replay, database write failures,
