@@ -4,6 +4,7 @@ services:
     networks: [public-backend]
     environment:
       GOZNE_SURFACE: public
+      GOZNE_AUTHORIZATION_TOKENS: '${GOZNE_AUTHORIZATION_TOKENS:-{}}'
     build: ../..
     image: gozne:dev
     read_only: true
@@ -95,6 +96,7 @@ services:
       - ../login/login.js:/usr/share/nginx/html/login.js:ro
       - ../login/panel.js:/usr/share/nginx/html/panel.js:ro
       - ../login/applications.js:/usr/share/nginx/html/applications.js:ro
+      - ../login/authorization.js:/usr/share/nginx/html/authorization.js:ro
       - ../login/style.css:/usr/share/nginx/html/style.css:ro
       - ${DEMO_TLS_DIRECTORY:-../compose/tls}/cert.pem:/etc/nginx/cert.pem:ro
       - ${DEMO_TLS_DIRECTORY:-../compose/tls}/key.pem:/etc/nginx/key.pem:ro

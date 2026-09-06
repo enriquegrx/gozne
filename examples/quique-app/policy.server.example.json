@@ -9,7 +9,21 @@
       "evmChainIds": [1],
       "solanaChains": ["solana:mainnet"],
       "approvalThreshold": 1,
-      "requiredRoles": ["reader"]
+      "requiredRoles": ["reader"],
+      "authorization": {
+        "permissions": [
+          "research.read",
+          "research.edit",
+          "workflow.request",
+          "workflow.approve"
+        ],
+        "roles": {
+          "reader": ["research.read"],
+          "editor": ["research.read", "research.edit", "workflow.request"],
+          "admin": ["*"]
+        },
+        "resources": [{ "type": "workspace", "id": "research-lab" }]
+      }
     }
   ],
   "identities": [

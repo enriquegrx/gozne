@@ -1,7 +1,13 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { validatePolicy } from '../policy/policy.js';
-import type { Identity, Application } from '../policy/policy.js';
+import type {
+  Identity,
+  Application,
+  AuthorizationModel,
+  ResourceGrant,
+} from '../policy/policy.js';
+import { decide } from '../authorization/decision.js';
 import { AuthError } from '../auth/errors.js';
 import { AuthStore, digest } from '../auth/store.js';
 import {
@@ -504,6 +510,114 @@ export class ControlStore {
       now,
     });
     return { ...result, reauthenticationRequired: result.changed };
+  }
+
+  authorization(raw: string, now: number) {
+    const actor = this.actor(raw, now, true);
+    const current = this.auth.policy()!;
+    const application = current.policy.applications.find(
+      (entry) => entry.id === actor.application,
+    )!;
+    return {
+      revision: current.digest,
+      application: actor.application,
+      model: application.authorization ?? {
+        permissions: [],
+        roles: {},
+        resources: [],
+      },
+      grants: current.policy.identities.flatMap((identity) =>
+        (identity.resourceGrants?.[actor.application] ?? []).map((grant) => ({
+          identity: identity.id,
+          ...grant,
+        })),
+      ),
+      identities: current.policy.identities
+        .filter((identity) => Object.hasOwn(identity.grants, actor.application))
+        .map((identity) => identity.id),
+    };
+  }
+
+  saveAuthorization(
+    raw: string,
+    input: {
+      revision: string;
+      model: AuthorizationModel;
+      grants: Array<ResourceGrant & { identity: string }>;
+    },
+    now: number,
+  ) {
+    const actor = this.actor(raw, now, true);
+    const current = this.auth.policy()!;
+    if (current.digest !== input.revision)
+      throw new AuthError(
+        409,
+        'POLICY_CONFLICT',
+        'Policy changed. Reload authorization before saving',
+      );
+    const policy = structuredClone(current.policy);
+    const application = policy.applications.find(
+      (entry) => entry.id === actor.application,
+    )!;
+    application.authorization = input.model;
+    const byIdentity = new Map<string, ResourceGrant[]>();
+    for (const grant of input.grants) {
+      const identity = policy.identities.find(
+        (entry) => entry.id === grant.identity,
+      );
+      if (!identity || !Object.hasOwn(identity.grants, actor.application))
+        throw new AuthError(
+          400,
+          'AUTHORIZATION_IDENTITY_INVALID',
+          'Resource grants must reference an application identity',
+        );
+      const entries = byIdentity.get(grant.identity) ?? [];
+      entries.push({
+        role: grant.role,
+        resource: grant.resource,
+        ...(grant.expiresAt === undefined
+          ? {}
+          : { expiresAt: grant.expiresAt }),
+      });
+      byIdentity.set(grant.identity, entries);
+    }
+    for (const identity of policy.identities) {
+      if (!Object.hasOwn(identity.grants, actor.application)) continue;
+      const grants = byIdentity.get(identity.id) ?? [];
+      identity.resourceGrants ??= {};
+      if (grants.length) identity.resourceGrants[actor.application] = grants;
+      else delete identity.resourceGrants[actor.application];
+      if (!Object.keys(identity.resourceGrants).length)
+        delete identity.resourceGrants;
+    }
+    let validated;
+    try {
+      validated = validatePolicy(policy);
+    } catch {
+      throw new AuthError(
+        400,
+        'AUTHORIZATION_INVALID',
+        'Invalid permissions, roles, resources or grants',
+      );
+    }
+    const result = this.auth.applyPolicy(validated, input.revision, {
+      token: raw,
+      now,
+    });
+    return { ...result, reauthenticationRequired: result.changed };
+  }
+
+  inspectAuthorization(
+    raw: string,
+    input: { identity: string; permission: string; resource: string },
+    now: number,
+  ) {
+    const actor = this.actor(raw, now, true);
+    const current = this.auth.policy()!;
+    return {
+      ...decide(current.policy, actor.application, input.identity, input, now),
+      policyRevision: current.digest,
+    };
   }
 
   revokeSession(raw: string, id: string, now: number) {

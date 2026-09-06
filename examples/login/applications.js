@@ -130,6 +130,15 @@
             evmChainIds: split(el('#app-evm').value).map(Number),
             solanaChains: split(el('#app-solana').value),
             approvalThreshold: Number(el('#app-approvals').value),
+            ...(directory.applications.find(
+              (app) => app.id === el('#application-picker').value,
+            )?.authorization
+              ? {
+                  authorization: directory.applications.find(
+                    (app) => app.id === el('#application-picker').value,
+                  ).authorization,
+                }
+              : {}),
           },
         },
         { 'X-CSRF-Token': window.gozneSession.csrfToken },

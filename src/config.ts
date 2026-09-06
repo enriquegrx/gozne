@@ -7,6 +7,7 @@ export interface Config {
   port: number;
   databasePath: string;
   logLevel: 'silent' | 'info' | 'warn' | 'error';
+  authorizationTokens: Record<string, string>;
   actionDelivery:
     | { mode: 'simulation' }
     | {
@@ -30,6 +31,7 @@ const keys = new Set([
   'GOZNE_ACTION_WEBHOOK_SECRET',
   'GOZNE_ACTION_WEBHOOK_TIMEOUT_MS',
   'GOZNE_ACTION_WEBHOOK_ALLOW_HTTP',
+  'GOZNE_AUTHORIZATION_TOKENS',
 ]);
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -130,12 +132,36 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       timeoutMs,
     };
   }
+  let authorizationTokens: Record<string, string> = {};
+  if (env.GOZNE_AUTHORIZATION_TOKENS !== undefined) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(env.GOZNE_AUTHORIZATION_TOKENS);
+    } catch {
+      throw new ConfigError('GOZNE_AUTHORIZATION_TOKENS must be valid JSON');
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      throw new ConfigError('GOZNE_AUTHORIZATION_TOKENS must be an object');
+    const entries = Object.entries(parsed);
+    if (
+      entries.length > 100 ||
+      entries.some(
+        ([application, secret]) =>
+          !/^[a-z][a-z0-9-]{0,63}$/.test(application) ||
+          typeof secret !== 'string' ||
+          Buffer.byteLength(secret) < 32,
+      )
+    )
+      throw new ConfigError('Invalid authorization application or token');
+    authorizationTokens = Object.fromEntries(entries) as Record<string, string>;
+  }
   return {
     surface,
     host,
     port: Number(rawPort),
     databasePath: resolve(database),
     logLevel,
+    authorizationTokens,
     actionDelivery,
   };
 }

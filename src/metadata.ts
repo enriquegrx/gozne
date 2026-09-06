@@ -19,6 +19,7 @@ export const authenticationCapabilities = [
   'forward-auth.session.v1',
   'forward-auth.request.v1',
 ] as const;
+export const authorizationCapability = 'authorization.resource.v1' as const;
 
 export const administrationCapability = 'control.admin.v1' as const;
 export const approvalThresholdCapability =

@@ -7,12 +7,14 @@ import {
   auditChainCapability,
   webhookActionCapability,
   authenticationCapabilities,
+  authorizationCapability,
   version,
 } from '../metadata.js';
 import type { Storage } from '../storage/database.js';
 import { AuthError } from '../auth/errors.js';
 import { controlRoutes } from '../control/routes.js';
 import { authRoutes } from '../auth/routes.js';
+import { authorizationRoutes } from '../authorization/routes.js';
 
 export function buildApp(config: Config, storage: Storage, now = Date.now) {
   const app = Fastify({
@@ -61,7 +63,8 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
       error.statusCode >= 400 &&
       error.statusCode < 500
         ? error.statusCode
-        : request.routeOptions.url?.startsWith('/v1/auth/')
+        : request.routeOptions.url?.startsWith('/v1/auth/') ||
+            request.routeOptions.url?.startsWith('/v1/internal/')
           ? 503
           : 500;
     const code =
@@ -122,10 +125,25 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
             auditChainCapability,
             webhookActionCapability,
           ]
-        : authenticationCapabilities,
+        : [
+            ...authenticationCapabilities,
+            ...(Object.keys(config.authorizationTokens).length
+              ? [authorizationCapability]
+              : []),
+          ],
   }));
   void app.register(async (scope) => {
     await authRoutes(scope, storage.auth, now, config.surface);
+    if (
+      config.surface === 'public' &&
+      Object.keys(config.authorizationTokens).length
+    )
+      await authorizationRoutes(
+        scope,
+        storage.auth,
+        config.authorizationTokens,
+        now,
+      );
     if (config.surface === 'admin')
       await scope.register(async (control) =>
         controlRoutes(

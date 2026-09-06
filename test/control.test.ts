@@ -936,6 +936,51 @@ test('panel creates a permanent user and applies wallet/role edits with session 
   assert.equal((await f.login(f.other)).response.statusCode, 401);
 });
 
+test('panel saves scoped authorization and explains effective access', async (t) => {
+  const f = fixture(t);
+  let owner = await f.login();
+  const revision = f.storage.auth.policy()!.digest;
+  const update = await f.post(owner, 'authorization', {
+    revision,
+    model: {
+      permissions: ['documents.read', 'documents.edit'],
+      roles: {
+        reader: ['documents.read'],
+        editor: ['documents.read', 'documents.edit'],
+      },
+      resources: [
+        { type: 'project', id: 'alpha' },
+        { type: 'document', id: '42', parent: 'project:alpha' },
+      ],
+    },
+    grants: [{ identity: 'owner', role: 'editor', resource: 'project:alpha' }],
+  });
+  assert.equal(update.statusCode, 200, update.body);
+  assert.equal(update.json().reauthenticationRequired, true);
+  assert.equal(f.storage.auth.session(owner.raw, Date.now()), null);
+
+  owner = await f.login();
+  const inspection = await f.post(owner, 'authorization/inspect', {
+    identity: 'owner',
+    permission: 'documents.edit',
+    resource: 'document:42',
+  });
+  assert.equal(inspection.statusCode, 200, inspection.body);
+  assert.deepEqual(
+    {
+      allowed: inspection.json().allowed,
+      reason: inspection.json().reason,
+    },
+    { allowed: true, reason: 'resource-role:editor@project:alpha' },
+  );
+  const stale = await f.post(owner, 'authorization', {
+    revision,
+    model: { permissions: [], roles: {}, resources: [] },
+    grants: [],
+  });
+  assert.equal(stale.statusCode, 409);
+});
+
 test('panel rejects stale, duplicate, cross-application and self-lockout edits', async (t) => {
   const f = fixture(t);
   const owner = await f.login();

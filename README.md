@@ -13,9 +13,10 @@ Your wallet opens the door. Your server decides what happens next.
 
 </div>
 
-Gozne is a **self-hosted wallet authentication gateway** with temporary access
-and signed approvals. Put it in front of an HTTP application, define who can
-enter, and keep control of sessions on your own server.
+Gozne is a **self-hosted wallet authentication and authorization gateway** with
+temporary access and signed approvals. Put it in front of an HTTP application,
+define who can enter and what each identity may do, and keep control of sessions
+on your own server.
 
 A wallet proves ownership by signing a message. Gozne checks it, creates an
 opaque session and tells the reverse proxy whether to let the request through.
@@ -57,6 +58,9 @@ application when an operation must be reviewed by more than one person.
   wallets.
 - 🍪 **Revocable sessions:** server-side state, secure host-only cookies,
   application roles and CSRF protection.
+- 🧩 **Resource authorization:** permission catalogs, reusable role bundles,
+  scoped grants, parent-child resources, expiry and a private decision API. See
+  the [resource authorization guide](docs/17-RESOURCE-AUTHORIZATION.md).
 - ⏱️ **Temporary invitations:** reader access for a specific wallet, expiry and
   immediate revocation, without rewriting the main policy.
 - ✍️ **Signed intent:** exact deployment parameters, fresh proofs from one or
@@ -154,6 +158,7 @@ flowchart LR
     W --> N[Nginx]
     N -->|Check live session| G
     N -->|Verified identity + roles| A[Your application]
+    A -->|Permission + resource + verified session| G
     G -->|Optional signed action webhook| A
 ```
 
@@ -183,17 +188,18 @@ npm run cli -- doctor --json
 
 Configuration validation is read-only. `doctor` expects an initialized database.
 
-| Variable                          | Local default          | Purpose                                              |
-| --------------------------------- | ---------------------- | ---------------------------------------------------- |
-| `GOZNE_SURFACE`                   | `public`               | `public` authentication or `admin` internal controls |
-| `GOZNE_HOST`                      | `127.0.0.1`            | Listen address                                       |
-| `GOZNE_PORT`                      | `3001`                 | HTTP port                                            |
-| `GOZNE_DATABASE`                  | `./state/gozne.sqlite` | SQLite file                                          |
-| `GOZNE_LOG_LEVEL`                 | `info`                 | `silent`, `info`, `warn` or `error`                  |
-| `GOZNE_ACTION_MODE`               | `simulation`           | `simulation` or private `webhook` delivery           |
-| `GOZNE_ACTION_WEBHOOK_URL`        | —                      | HTTPS receiver URL                                   |
-| `GOZNE_ACTION_WEBHOOK_SECRET`     | —                      | Shared secret of at least 32 bytes                   |
-| `GOZNE_ACTION_WEBHOOK_TIMEOUT_MS` | `5000`                 | Receiver timeout, from 500 to 10,000 ms              |
+| Variable                          | Local default          | Purpose                                               |
+| --------------------------------- | ---------------------- | ----------------------------------------------------- |
+| `GOZNE_SURFACE`                   | `public`               | `public` authentication or `admin` internal controls  |
+| `GOZNE_HOST`                      | `127.0.0.1`            | Listen address                                        |
+| `GOZNE_PORT`                      | `3001`                 | HTTP port                                             |
+| `GOZNE_DATABASE`                  | `./state/gozne.sqlite` | SQLite file                                           |
+| `GOZNE_LOG_LEVEL`                 | `info`                 | `silent`, `info`, `warn` or `error`                   |
+| `GOZNE_AUTHORIZATION_TOKENS`      | `{}`                   | JSON map of application IDs to private service tokens |
+| `GOZNE_ACTION_MODE`               | `simulation`           | `simulation` or private `webhook` delivery            |
+| `GOZNE_ACTION_WEBHOOK_URL`        | —                      | HTTPS receiver URL                                    |
+| `GOZNE_ACTION_WEBHOOK_SECRET`     | —                      | Shared secret of at least 32 bytes                    |
+| `GOZNE_ACTION_WEBHOOK_TIMEOUT_MS` | `5000`                 | Receiver timeout, from 500 to 10,000 ms               |
 
 The container listens on `0.0.0.0` and stores state in `/app/state`. No session
 signing secret is needed. Node reads environment variables; it does not load
@@ -207,6 +213,7 @@ imported. Keep `/v1/auth/validate` internal to the proxy.
 - [API guide](docs/03-API-AND-CONTRACTS.md) · [OpenAPI contract](openapi.yaml)
 - [Control panel and signed actions](docs/11-CONTROL-PANEL.md)
 - [Signed action webhooks](docs/16-ACTION-WEBHOOKS.md)
+- [Resource authorization](docs/17-RESOURCE-AUTHORIZATION.md)
 - [Threat model](docs/04-SECURITY.md) · [Recovery](docs/09-RECOVERY.md)
 - [Verification and reports](docs/10-VERIFICATION.md) ·
   [Roadmap](docs/06-ROADMAP.md)

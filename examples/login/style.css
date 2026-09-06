@@ -598,6 +598,49 @@ summary {
     gap: 10px;
   }
 }
+.authorization-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.authorization-grid textarea {
+  min-height: 10rem;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.inspector-form {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.decision {
+  min-height: 1.5rem;
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--cream);
+  font-weight: 700;
+}
+
+.decision:empty {
+  display: none;
+}
+
+.decision-allowed {
+  color: #17633a;
+  background: #e7f4e9;
+}
+
+.decision-denied {
+  color: #8c2f20;
+  background: #f8e8e2;
+}
+
 @media (max-width: 880px) {
   .sidebar {
     position: static;
@@ -1569,6 +1612,10 @@ body {
 
   .admin-page .content-grid {
     grid-template-columns: minmax(0, 1fr) 17rem;
+  }
+
+  .authorization-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

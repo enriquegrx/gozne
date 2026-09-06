@@ -9,15 +9,17 @@ uses ISO 8601.
 
 ## Authentication routes
 
-| Method | Route                                | Purpose                         | Requirement              |
-| ------ | ------------------------------------ | ------------------------------- | ------------------------ |
-| GET    | `/healthz`                           | SQLite read health              | None                     |
-| GET    | `/version`                           | Build and capability metadata   | None                     |
-| POST   | `/v1/auth/nonce`                     | Issue login challenge           | Allowed origin and chain |
-| POST   | `/v1/auth/verify`                    | Verify proof and create session | Login context cookie     |
-| GET    | `/v1/auth/me`                        | Current session and CSRF token  | Session                  |
-| GET    | `/v1/auth/validate?application=demo` | Internal proxy decision         | Session                  |
-| POST   | `/v1/auth/logout`                    | Revoke current session          | Session, origin and CSRF |
+| Method | Route                                | Purpose                          | Requirement               |
+| ------ | ------------------------------------ | -------------------------------- | ------------------------- |
+| GET    | `/healthz`                           | SQLite read health               | None                      |
+| GET    | `/version`                           | Build and capability metadata    | None                      |
+| POST   | `/v1/auth/nonce`                     | Issue login challenge            | Allowed origin and chain  |
+| POST   | `/v1/auth/verify`                    | Verify proof and create session  | Login context cookie      |
+| GET    | `/v1/auth/me`                        | Current session and CSRF token   | Session                   |
+| GET    | `/v1/auth/validate?application=demo` | Internal proxy decision          | Session                   |
+| POST   | `/v1/auth/logout`                    | Revoke current session           | Session, origin and CSRF  |
+| POST   | `/v1/internal/authorize`             | Permission and resource decision | Application service token |
+| POST   | `/v1/internal/authorize/batch`       | Up to 50 ordered decisions       | Application service token |
 
 ## Login flow
 
@@ -139,6 +141,14 @@ logout.
 and revision-checked permanent user edits. See the
 [panel guide](11-CONTROL-PANEL.md#permanent-users-wallets-and-application-roles)
 for scope, shared-wallet restrictions and instance-wide session invalidation.
+
+`GET` and `POST /v1/auth/control/authorization` read and replace the current
+application's permission catalog, role bundles, resource hierarchy and scoped
+grants. `POST /v1/auth/control/authorization/inspect` explains an effective
+decision. These routes require a private administrator session; writes require
+Origin and CSRF and invalidate all sessions when the policy changes. The
+[resource authorization guide](17-RESOURCE-AUTHORIZATION.md) defines the
+service-side integration and trust boundary.
 
 ## Errors
 

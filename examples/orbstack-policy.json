@@ -8,7 +8,16 @@
       "solanaChains": ["solana:mainnet", "solana:devnet"],
       "approvalThreshold": 1,
       "requiredRoles": ["reader"],
-      "adminOrigin": "https://127.0.0.1:9443"
+      "adminOrigin": "https://127.0.0.1:9443",
+      "authorization": {
+        "permissions": ["content.read", "content.edit", "workflow.approve"],
+        "roles": {
+          "reader": ["content.read"],
+          "editor": ["content.read", "content.edit"],
+          "admin": ["*"]
+        },
+        "resources": [{ "type": "workspace", "id": "main" }]
+      }
     }
   ],
   "identities": [

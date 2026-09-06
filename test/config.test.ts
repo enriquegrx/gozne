@@ -8,6 +8,7 @@ test('configuration defaults to loopback and persistent storage', () => {
   assert.equal(config.port, 3001);
   assert.match(config.databasePath, /state\/gozne.sqlite$/);
   assert.deepEqual(config.actionDelivery, { mode: 'simulation' });
+  assert.deepEqual(config.authorizationTokens, {});
 });
 
 test('rejects ambiguous ports, unknown options and volatile storage', () => {
@@ -36,6 +37,22 @@ test('rejects ambiguous ports, unknown options and volatile storage', () => {
       GOZNE_ACTION_WEBHOOK_URL: 'https://adapter.example.test',
       GOZNE_ACTION_WEBHOOK_SECRET: 'x'.repeat(32),
     }),
+  );
+  assert.throws(() => loadConfig({ GOZNE_AUTHORIZATION_TOKENS: '{not-json' }));
+  assert.throws(() =>
+    loadConfig({
+      GOZNE_AUTHORIZATION_TOKENS: JSON.stringify({ docs: 'too-short' }),
+    }),
+  );
+});
+
+test('loads per-application authorization service tokens', () => {
+  const token = 'service-token-value.'.repeat(2);
+  assert.deepEqual(
+    loadConfig({
+      GOZNE_AUTHORIZATION_TOKENS: JSON.stringify({ docs: token }),
+    }).authorizationTokens,
+    { docs: token },
   );
 });
 

@@ -11,6 +11,7 @@
     <script src="/login.js" defer></script>
     <script src="/panel.js" defer></script>
     <script src="/applications.js" defer></script>
+    <script src="/authorization.js" defer></script>
   </head>
   <body class="admin-page">
     <a class="skip" href="#main">Skip to content</a>
@@ -28,6 +29,8 @@
         ><a href="#applications">Applications</a
         ><a href="#users"
           ><span aria-hidden="true">♙</span> Users &amp; wallets</a
+        ><a href="#authorization"
+          ><span aria-hidden="true">⌘</span> Authorization</a
         ><a href="#sessions"><span aria-hidden="true">◎</span> Sessions</a
         ><a href="#activity"><span aria-hidden="true">◷</span> Deployments</a
         ><a href="#audit"><span aria-hidden="true">≡</span> Audit trail</a>
@@ -337,6 +340,100 @@
                     or seed phrase.
                   </p>
                   <button type="submit">Save user and apply policy</button>
+                </fieldset>
+              </form>
+            </section>
+            <section class="card" id="authorization">
+              <div class="section-heading">
+                <div>
+                  <h2>Resource authorization</h2>
+                  <p class="muted">
+                    Decide what each identity can do, and where.
+                  </p>
+                </div>
+                <span class="tag">ADMIN</span>
+              </div>
+              <p class="note">
+                Application roles apply everywhere. Resource grants apply only
+                to a resource, its children, or a resource type wildcard. Saving
+                applies one reviewed policy revision and signs everyone out.
+              </p>
+              <button
+                id="reload-authorization"
+                type="button"
+                class="secondary"
+                disabled
+              >
+                Reload authorization
+              </button>
+              <p id="authorization-status" role="status">
+                Administrator sign-in required.
+              </p>
+              <form id="authorization-form">
+                <fieldset id="authorization-fields" disabled>
+                  <div class="authorization-grid">
+                    <label
+                      >Permissions, one per line<textarea
+                        id="authorization-permissions"
+                        rows="7"
+                        placeholder="documents.read&#10;documents.edit&#10;workflow.approve"
+                      ></textarea></label
+                    ><label
+                      >Role bundles<textarea
+                        id="authorization-roles"
+                        rows="7"
+                        placeholder="reader: documents.read&#10;editor: documents.read, documents.edit&#10;admin: *"
+                      ></textarea></label
+                    ><label
+                      >Resource hierarchy<textarea
+                        id="authorization-resources"
+                        rows="7"
+                        placeholder="project:alpha&#10;document:42 > project:alpha"
+                      ></textarea></label
+                    ><label
+                      >Scoped grants<textarea
+                        id="authorization-grants"
+                        rows="7"
+                        placeholder="alice | editor | project:alpha&#10;bob | reader | document:*"
+                      ></textarea>
+                    </label>
+                  </div>
+                  <p class="note">
+                    Grant format: identity | role | resource | optional expiry
+                    as an ISO date. A parent resource must be declared before it
+                    can be referenced.
+                  </p>
+                  <button type="submit">Save authorization policy</button>
+                </fieldset>
+              </form>
+              <form id="authorization-inspector" class="inspector-form">
+                <fieldset id="authorization-inspector-fields" disabled>
+                  <legend>Access inspector</legend>
+                  <div class="form-row">
+                    <label
+                      >Identity<select
+                        id="authorization-identity"
+                      ></select></label
+                    ><label
+                      >Permission<input
+                        id="authorization-permission"
+                        placeholder="documents.edit"
+                        required /></label
+                    ><label
+                      >Resource<input
+                        id="authorization-resource"
+                        placeholder="document:42"
+                        required
+                    /></label>
+                  </div>
+                  <button type="submit" class="secondary">
+                    Check effective access
+                  </button>
+                  <p
+                    id="authorization-result"
+                    class="decision"
+                    role="status"
+                  ></p>
                 </fieldset>
               </form>
             </section>

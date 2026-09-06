@@ -13,6 +13,7 @@ flowchart LR
     U[Public browser + wallet] --> P[Public HTTPS proxy]
     P --> G[Public authentication API]
     P --> A[Protected application]
+    A -->|Private permission decision| G
     G --> S[(Local SQLite)]
     I[Local or VPN browser] --> D[Private panel + HTTPS proxy]
     D --> C[Private control API]
@@ -23,17 +24,18 @@ flowchart LR
 
 ## Components
 
-| Location         | Responsibility                                            |
-| ---------------- | --------------------------------------------------------- |
-| `src/api`        | Fastify setup, errors, minimal request logging and health |
-| `src/auth`       | Login challenges, sessions, CSRF, live authorization      |
-| `src/wallets`    | Canonical addresses and exact SIWE/SIWS messages          |
-| `src/policy`     | Strict declarative JSON policy validation                 |
-| `src/control`    | Invitations, approval proofs and action delivery          |
-| `src/storage`    | Migrations, integrity checks, backup and restore          |
-| `cli`            | Local operator commands                                   |
-| `examples/login` | Static browser panel and wallet discovery                 |
-| `examples/nginx` | Same-origin HTTPS proxy integration                       |
+| Location            | Responsibility                                            |
+| ------------------- | --------------------------------------------------------- |
+| `src/api`           | Fastify setup, errors, minimal request logging and health |
+| `src/auth`          | Login challenges, sessions, CSRF, live authorization      |
+| `src/authorization` | Permission and resource decisions and private service API |
+| `src/wallets`       | Canonical addresses and exact SIWE/SIWS messages          |
+| `src/policy`        | Strict declarative JSON policy validation                 |
+| `src/control`       | Invitations, approval proofs and action delivery          |
+| `src/storage`       | Migrations, integrity checks, backup and restore          |
+| `cli`               | Local operator commands                                   |
+| `examples/login`    | Static browser panel and wallet discovery                 |
+| `examples/nginx`    | Same-origin HTTPS proxy integration                       |
 
 ## Persistence and atomicity
 
@@ -76,6 +78,13 @@ the same validated policy transaction with revision checking and live
 administrator authorization. The existing instance-wide invalidation rules
 apply. Cross-application wallet changes remain CLI-only.
 
+Applications can declare permission catalogs, role bundles and a resource
+hierarchy. Existing application roles are global bundles; `resourceGrants` limit
+a bundle to a resource, its descendants or a declared type wildcard. The
+application backend asks the private decision API using its own service token
+and the proxy-verified public session ID. Unknown inputs and unavailable state
+deny access. See [resource authorization](17-RESOURCE-AUTHORIZATION.md).
+
 ## Frontend decision
 
 The panel uses local HTML, CSS and JavaScript. The API already owns state,
@@ -91,6 +100,8 @@ in English.
 - Only headers generated after successful authorization reach the protected app.
 - The gateway does not trust forwarding headers for rate limits or origins.
 - Gateway, database and protected app require a private deployment boundary.
+- Resource decisions use per-application bearer tokens only on that private
+  boundary; public Nginx routes hide `/v1/internal/*`.
 - The CLI is a local administrative interface. Panel administration requires a
   live session with the application's reserved `admin` role; mutations also
   require same-origin checks and CSRF.

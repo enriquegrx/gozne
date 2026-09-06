@@ -115,7 +115,7 @@ test('certificate checks distinguish expiry from the two-day renewal window', ()
 test('deployment diagnostics require surface-specific version capabilities', () => {
   const publicMetadata = {
     name: 'gozne',
-    version: '0.1.0-dev.16',
+    version: '0.1.0-dev.17',
     stage: 'alpha',
     surface: 'public',
     authentication: true,

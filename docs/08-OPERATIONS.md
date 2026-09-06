@@ -140,6 +140,14 @@ verification and recovery rules are in
 
 ## Proxy integration
 
+Resource authorization uses a per-application token supplied through
+`GOZNE_AUTHORIZATION_TOKENS`. Configure it only on the public Gozne backend and
+give the corresponding value only to that application's server. Both services
+must share a private network. The bundled Nginx configurations return `404` for
+`/v1/internal/*`; do not add a public or Cloudflare route for it. Rotate a token
+by updating both services and restarting them. See
+[resource authorization](17-RESOURCE-AUTHORIZATION.md).
+
 Login, API and application share an HTTPS origin. Cookies are host-only; this
 alpha does not provide cross-domain SSO. Nginx internally validates the `demo`
 session before serving `/private/`, then forwards verified identity, roles,

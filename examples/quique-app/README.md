@@ -97,6 +97,13 @@ no wallets by default. Never commit an operational policy, TLS keys or
 credentials. The admin container renders the `quique` application default into
 tmpfs at start.
 
+For object-level checks, configure a random `quique` entry in
+`GOZNE_AUTHORIZATION_TOKENS` on the gateway and give the same secret only to the
+application backend. Both containers communicate on the private backend network;
+`/v1/internal/*` stays outside Nginx and Cloudflare. The example policy declares
+research and workflow permissions. See the
+[resource authorization guide](../../docs/17-RESOURCE-AUTHORIZATION.md).
+
 Required external configuration:
 
 - Cloudflare Tunnel: `app.quique.es` to the Docker host's port 3012.

@@ -190,8 +190,10 @@ for (const surface of ['public', 'admin'] as const) {
             ['/admin.html', 404],
             ['/panel.js', 404],
             ['/applications.js', 404],
+            ['/authorization.js', 404],
             ['/v1/auth/control', 404],
             ['/v1/auth/control/users', 404],
+            ['/v1/internal/authorize', 404],
           ]
         : [
             ['/healthz', 200],
@@ -199,7 +201,9 @@ for (const surface of ['public', 'admin'] as const) {
             ['/i18n.js', 200],
             ['/panel.js', 200],
             ['/applications.js', 200],
+            ['/authorization.js', 200],
             ['/v1/auth/control/users', 401],
+            ['/v1/internal/authorize', 404],
           ];
     for (const [path, expected] of paths) {
       const result = await probe(origin, path, ca);

@@ -84,6 +84,7 @@
     Invitations: 'Invitaciones',
     Applications: 'Aplicaciones',
     'Users & wallets': 'Usuarios y wallets',
+    Authorization: 'Autorización',
     Sessions: 'Sesiones',
     Deployments: 'Despliegues',
     'Audit trail': 'Registro de auditoría',
@@ -181,6 +182,36 @@
     'Add, disable or remove public wallets. Never enter private keys or seed phrases.':
       'Añade, desactiva o elimina wallets públicas. Nunca introduzcas claves privadas ni frases semilla.',
     'Save user and apply policy': 'Guardar usuario y aplicar política',
+    'Resource authorization': 'Autorización por recursos',
+    'Decide what each identity can do, and where.':
+      'Decide qué puede hacer cada identidad y dónde.',
+    'Application roles apply everywhere. Resource grants apply only to a resource, its children, or a resource type wildcard. Saving applies one reviewed policy revision and signs everyone out.':
+      'Los roles de aplicación se aplican en todas partes. Las concesiones de recursos solo se aplican a un recurso, a sus hijos o al comodín de un tipo. Guardar aplica una revisión de política y cierra todas las sesiones.',
+    'Reload authorization': 'Recargar autorización',
+    'Permissions, one per line': 'Permisos, uno por línea',
+    'Role bundles': 'Conjuntos de roles',
+    'Resource hierarchy': 'Jerarquía de recursos',
+    'Scoped grants': 'Concesiones con ámbito',
+    'Grant format: identity | role | resource | optional expiry as an ISO date. A parent resource must be declared before it can be referenced.':
+      'Formato: identidad | rol | recurso | caducidad ISO opcional. Un recurso padre debe declararse antes de poder referenciarlo.',
+    'Save authorization policy': 'Guardar política de autorización',
+    'Access inspector': 'Inspector de acceso',
+    Permission: 'Permiso',
+    Resource: 'Recurso',
+    'Check effective access': 'Comprobar acceso efectivo',
+    Allowed: 'Permitido',
+    Denied: 'Denegado',
+    'Each role needs a colon.': 'Cada rol necesita dos puntos.',
+    'Invalid resource hierarchy line.':
+      'La línea de jerarquía de recursos no es válida.',
+    'Invalid scoped grant line.':
+      'La línea de concesión con ámbito no es válida.',
+    'Invalid grant expiry.': 'La caducidad de la concesión no es válida.',
+    'Reload authorization first.': 'Recarga primero la autorización.',
+    'Authorization saved. Sign in again to use the new policy.':
+      'Autorización guardada. Inicia sesión otra vez para usar la política nueva.',
+    'No authorization changes were needed.':
+      'No ha sido necesario cambiar la autorización.',
     'Active sessions': 'Sesiones activas',
     'Close access immediately. A revoked signer also invalidates their pending approvals.':
       'Cierra el acceso al instante. Revocar un firmante también invalida sus aprobaciones pendientes.',

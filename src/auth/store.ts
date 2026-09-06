@@ -377,6 +377,29 @@ export class AuthStore {
     return { ...row, roles: access.roles };
   }
 
+  sessionById(id: string, now: number) {
+    const row = this.db
+      .prepare('SELECT token_hash FROM sessions WHERE id = ?')
+      .get(id);
+    return row ? this.sessionByHash(String(row.token_hash), now) : null;
+  }
+
+  recordAuthorizationDecision(
+    session: Session,
+    allowed: boolean,
+    permission: string,
+    now: number,
+  ): void {
+    if (allowed && /(?:^|\.)(?:read|list|view)$/.test(permission)) return;
+    this.audit(
+      allowed ? 'authorization.allowed-sensitive' : 'authorization.denied',
+      now,
+      session.identity,
+      session.id,
+      session.application,
+    );
+  }
+
   session(sessionToken: string, now: number) {
     if (!validToken(sessionToken)) return null;
     const row = this.db

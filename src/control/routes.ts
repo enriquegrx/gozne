@@ -24,6 +24,52 @@ const text = {
   pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$',
 };
 const params = object({ id });
+const permission = {
+  type: 'string',
+  maxLength: 64,
+  pattern: '^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$',
+};
+const resource = {
+  type: 'string',
+  maxLength: 97,
+  pattern: '^[a-z][a-z0-9-]{0,31}:(?:\\*|[A-Za-z0-9][A-Za-z0-9._-]{0,63})$',
+};
+const authorizationModel = object({
+  permissions: {
+    type: 'array',
+    maxItems: 100,
+    uniqueItems: true,
+    items: permission,
+  },
+  roles: {
+    type: 'object',
+    maxProperties: 50,
+    propertyNames: { pattern: '^[a-z][a-z0-9-]{0,63}$' },
+    additionalProperties: {
+      type: 'array',
+      maxItems: 100,
+      uniqueItems: true,
+      items: { anyOf: [permission, { const: '*' }] },
+    },
+  },
+  resources: {
+    type: 'array',
+    maxItems: 1000,
+    items: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'id'],
+      properties: {
+        type: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
+        id: {
+          type: 'string',
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$',
+        },
+        parent: resource,
+      },
+    },
+  },
+});
 
 export async function controlRoutes(
   app: FastifyInstance,
@@ -110,6 +156,7 @@ export async function controlRoutes(
                 minimum: 1,
                 maximum: 10,
               },
+              authorization: authorizationModel,
             }),
             required: [
               'id',
@@ -169,6 +216,78 @@ export async function controlRoutes(
     },
     async (request) =>
       store.saveUser(request.cookies[SESSION_COOKIE]!, request.body, now()),
+  );
+  app.get('/v1/auth/control/authorization', async (request) =>
+    store.authorization(request.cookies[SESSION_COOKIE]!, now()),
+  );
+  app.post<{
+    Body: {
+      revision: string;
+      model: import('../policy/policy.js').AuthorizationModel;
+      grants: Array<
+        import('../policy/policy.js').ResourceGrant & { identity: string }
+      >;
+    };
+  }>(
+    '/v1/auth/control/authorization',
+    {
+      schema: {
+        body: object({
+          revision: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+          model: authorizationModel,
+          grants: {
+            type: 'array',
+            maxItems: 5000,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['identity', 'role', 'resource'],
+              properties: {
+                identity: {
+                  type: 'string',
+                  pattern: '^[a-z][a-z0-9-]{0,63}$',
+                },
+                role: {
+                  type: 'string',
+                  pattern: '^[a-z][a-z0-9-]{0,63}$',
+                },
+                resource,
+                expiresAt: { type: 'integer', minimum: 1 },
+              },
+            },
+          },
+        }),
+      },
+    },
+    async (request) =>
+      store.saveAuthorization(
+        request.cookies[SESSION_COOKIE]!,
+        request.body,
+        now(),
+      ),
+  );
+  app.post<{
+    Body: { identity: string; permission: string; resource: string };
+  }>(
+    '/v1/auth/control/authorization/inspect',
+    {
+      schema: {
+        body: object({
+          identity: {
+            type: 'string',
+            pattern: '^[a-z][a-z0-9-]{0,63}$',
+          },
+          permission,
+          resource,
+        }),
+      },
+    },
+    async (request) =>
+      store.inspectAuthorization(
+        request.cookies[SESSION_COOKIE]!,
+        request.body,
+        now(),
+      ),
   );
   app.get('/v1/auth/control', async (request) => ({
     ...store.overview(request.cookies[SESSION_COOKIE]!, now()),

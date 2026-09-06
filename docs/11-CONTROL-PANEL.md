@@ -297,6 +297,23 @@ identity/application. Full policy export and cross-application wallet changes
 remain local CLI operations. Application definitions are managed by explicitly
 authorized [application managers](13-APPLICATIONS.md).
 
+## Resource authorization editor
+
+Administrators can define the current application's permission catalog, role
+bundles, resource hierarchy and scoped grants in one revision-checked form. The
+access inspector evaluates an identity, permission and resource without changing
+policy and explains the matching application role, scoped role or deny reason. A
+save uses the same global session invalidation rules described above.
+
+The editor uses compact line formats so the complete model remains visible for
+review. Permissions use one line each. Roles use `role: permission, permission`.
+Resources use `type:id` or `type:id > parent-type:parent-id`. Grants use
+`identity | role | resource | optional ISO expiry`. The server parses none of
+these strings directly: the browser converts them to the strict JSON contract,
+which the server validates again. See
+[resource authorization](17-RESOURCE-AUTHORIZATION.md) for policy examples and
+the application service API.
+
 ### Deployment boundary
 
 The panel and its JSON API now run in separate containers from public sign-in.

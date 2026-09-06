@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.16
+  version: 0.1.0-dev.17
   description:
     Alpha EVM/SIWS authentication and signed action controls. API and login
     require the same HTTPS origin within each surface. Control paths exist only
@@ -67,6 +67,7 @@ paths:
                         - auth.solana.siws.v1
                         - forward-auth.session.v1
                         - forward-auth.request.v1
+                        - authorization.resource.v1
                         - control.admin.v1
                         - control.approval-threshold.v1
                         - audit.export-chain.v1
@@ -1531,6 +1532,185 @@ paths:
           schema:
             type: string
             pattern: ^[a-f0-9]{64}$
+  /v1/internal/authorize:
+    post:
+      summary: Decide whether a live application session may act on a resource
+      description:
+        Internal service-network route. The bearer token selects the
+        application; the session must be live and belong to it. Unknown
+        permissions, resources and missing grants deny by default.
+      security:
+        - ApplicationServiceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorizationRequest'
+      responses:
+        '200':
+          description: An allow or deny decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationDecision'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid service credential or application session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/internal/authorize/batch:
+    post:
+      summary: Decide up to 50 permissions for one live session
+      security:
+        - ApplicationServiceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sessionId, checks]
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                checks:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    $ref: '#/components/schemas/AuthorizationCheck'
+      responses:
+        '200':
+          description: Ordered decisions corresponding to the submitted checks
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [decisions]
+                properties:
+                  decisions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuthorizationDecision'
+        '401':
+          description: Invalid service credential or application session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/auth/control/authorization:
+    get:
+      summary: Read the current application's authorization model and grants
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Authorization editor state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationDirectory'
+        '401':
+          description: Invalid session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Replace the current application's authorization model and grants
+      description:
+        Uses an optimistic policy revision. A change invalidates all sessions,
+        invitations and pending approvals in the instance.
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorizationUpdate'
+      responses:
+        '200':
+          description: Policy update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdateResult'
+        '400':
+          description: Invalid model or grant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Stale policy revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/auth/control/authorization/inspect:
+    post:
+      summary: Explain an effective access decision without changing policy
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [identity, permission, resource]
+              properties:
+                identity:
+                  type: string
+                  pattern: ^[a-z][a-z0-9-]{0,63}$
+                permission:
+                  $ref: '#/components/schemas/Permission'
+                resource:
+                  $ref: '#/components/schemas/ResourceKey'
+      responses:
+        '200':
+          description: Effective decision and reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationDecision'
   /v1/auth/control/users:
     get:
       summary: Read the application-scoped administrator user directory
@@ -1694,6 +1874,12 @@ components:
       in: cookie
       name: __Host-gozne-session
       description: Secure; HttpOnly; SameSite=Strict; Path=/; no Domain
+    ApplicationServiceToken:
+      type: http
+      scheme: bearer
+      description:
+        Per-application secret configured through GOZNE_AUTHORIZATION_TOKENS;
+        use only across the private service network
   schemas:
     ApplicationDefinition:
       type: object
@@ -1743,6 +1929,137 @@ components:
           default: 1
           description:
             Distinct live administrator identities required for an action
+        authorization:
+          $ref: '#/components/schemas/AuthorizationModel'
+    Permission:
+      type: string
+      maxLength: 64
+      pattern: ^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$
+    ResourceKey:
+      type: string
+      maxLength: 97
+      pattern: ^[a-z][a-z0-9-]{0,31}:[A-Za-z0-9][A-Za-z0-9._-]{0,63}$
+    AuthorizationResource:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type: *id001
+        id:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$
+        parent:
+          $ref: '#/components/schemas/ResourceKey'
+    AuthorizationModel:
+      type: object
+      additionalProperties: false
+      required: [permissions, roles, resources]
+      properties:
+        permissions:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Permission'
+        roles:
+          type: object
+          maxProperties: 50
+          additionalProperties:
+            type: array
+            maxItems: 100
+            uniqueItems: true
+            items:
+              anyOf:
+                - $ref: '#/components/schemas/Permission'
+                - const: '*'
+        resources:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/AuthorizationResource'
+    ResourceGrant:
+      type: object
+      additionalProperties: false
+      required: [identity, role, resource]
+      properties:
+        identity: *id001
+        role: *id001
+        resource:
+          type: string
+          description:
+            Exact resource key or a declared type wildcard such as document:*
+        expiresAt:
+          type: integer
+          minimum: 1
+          description:
+            Optional Unix-millisecond expiry; expired grants never match
+    AuthorizationCheck:
+      type: object
+      additionalProperties: false
+      required: [permission, resource]
+      properties:
+        permission:
+          $ref: '#/components/schemas/Permission'
+        resource:
+          $ref: '#/components/schemas/ResourceKey'
+    AuthorizationRequest:
+      allOf:
+        - $ref: '#/components/schemas/AuthorizationCheck'
+        - type: object
+          required: [sessionId]
+          properties:
+            sessionId:
+              type: string
+              format: uuid
+    AuthorizationDecision:
+      type: object
+      additionalProperties: false
+      required: [allowed, reason, policyRevision]
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+        decisionId:
+          type: string
+          format: uuid
+          description: Present on service API decisions
+        policyRevision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+    AuthorizationDirectory:
+      type: object
+      additionalProperties: false
+      required: [revision, application, model, grants, identities]
+      properties:
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        application: *id001
+        model:
+          $ref: '#/components/schemas/AuthorizationModel'
+        grants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceGrant'
+        identities:
+          type: array
+          items: *id001
+    AuthorizationUpdate:
+      type: object
+      additionalProperties: false
+      required: [revision, model, grants]
+      properties:
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        model:
+          $ref: '#/components/schemas/AuthorizationModel'
+        grants:
+          type: array
+          maxItems: 5000
+          items:
+            $ref: '#/components/schemas/ResourceGrant'
     ApplicationDirectory:
       type: object
       additionalProperties: false

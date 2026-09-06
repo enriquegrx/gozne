@@ -162,6 +162,20 @@ test('login and panel scripts coexist and render administrator actions without u
               requiredRoles: ['reader'],
               users: [],
             };
+      if (url === '/v1/auth/control/authorization')
+        result = options.body
+          ? { changed: true, reauthenticationRequired: true }
+          : {
+              revision: 'a'.repeat(64),
+              application: 'demo',
+              model: {
+                permissions: ['documents.read'],
+                roles: { reader: ['documents.read'] },
+                resources: [{ type: 'document', id: 'guide' }],
+              },
+              grants: [],
+              identities: ['owner'],
+            };
       if (url === '/v1/auth/nonce')
         result = { nonce: 'nonce', message: 'Login' };
       if (url === '/v1/auth/control')
@@ -229,7 +243,12 @@ test('login and panel scripts coexist and render administrator actions without u
       };
     },
   });
-  for (const file of ['login.js', 'panel.js', 'applications.js'])
+  for (const file of [
+    'login.js',
+    'panel.js',
+    'applications.js',
+    'authorization.js',
+  ])
     runInContext(
       readFileSync(
         new URL(`../../examples/login/${file}`, import.meta.url),
@@ -244,6 +263,8 @@ test('login and panel scripts coexist and render administrator actions without u
   assert.equal(select('#metric-pending').textContent, 1);
   assert.equal(select('#audit-event').disabled, false);
   assert.equal(select('#audit-more').disabled, true);
+  assert.equal(select('#authorization-fields').disabled, false);
+  assert.equal(select('#authorization-permissions').value, 'documents.read');
   assert.equal(
     select('#audit-list').children[0]!.children[0]!.children[0]!.textContent,
     'login.succeeded',

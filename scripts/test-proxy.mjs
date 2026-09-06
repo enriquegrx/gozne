@@ -172,17 +172,23 @@ try {
   for (const path of [
     '/panel.js',
     '/applications.js',
+    '/authorization.js',
     '/admin.html',
     '/v1/auth/control',
     '/v1/auth/control/audit',
     '/v1/auth/control/users',
     '/v1/auth/control%2fusers',
+    '/v1/internal/authorize',
   ])
     assert.equal((await http(path)).status, 404, path);
   const adminPage = await http('/', { internal: true });
   assert.match(adminPage.text, /Users &amp; wallets/);
   assert.match(adminPage.text, /\/i18n\.js/);
   assert.equal((await http('/i18n.js', { internal: true })).status, 200);
+  assert.equal(
+    (await http('/authorization.js', { internal: true })).status,
+    200,
+  );
   const adminVersion = JSON.parse(
     (await http('/version', { internal: true })).text,
   );

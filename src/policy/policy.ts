@@ -11,11 +11,28 @@ export interface Application {
   solanaChains: string[];
   requiredRoles: string[];
   approvalThreshold?: number;
+  authorization?: AuthorizationModel;
+}
+export interface AuthorizationResource {
+  type: string;
+  id: string;
+  parent?: string;
+}
+export interface AuthorizationModel {
+  permissions: string[];
+  roles: Record<string, string[]>;
+  resources: AuthorizationResource[];
+}
+export interface ResourceGrant {
+  role: string;
+  resource: string;
+  expiresAt?: number;
 }
 export interface Identity {
   id: string;
   wallets: { network: Network; address: string; enabled: boolean }[];
   grants: Record<string, string[]>;
+  resourceGrants?: Record<string, ResourceGrant[]>;
 }
 export interface Policy {
   applicationManagers?: string[];
@@ -59,6 +76,89 @@ function roles(value: unknown): string[] {
   return unique(list(value, 20).map(identifier));
 }
 
+const permission = (value: unknown): string => {
+  if (
+    typeof value !== 'string' ||
+    !/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/.test(value) ||
+    value.length > 64
+  )
+    throw new ConfigError('Invalid permission');
+  return value;
+};
+const resourceKey = (value: unknown): string => {
+  if (
+    typeof value !== 'string' ||
+    !/^[a-z][a-z0-9-]{0,31}:(?:\*|[A-Za-z0-9][A-Za-z0-9._-]{0,63})$/.test(value)
+  )
+    throw new ConfigError('Invalid resource');
+  return value;
+};
+
+function authorizationModel(value: unknown): AuthorizationModel {
+  const model = object(value, ['permissions', 'roles', 'resources']);
+  const permissions = unique(list(model.permissions, 100).map(permission));
+  if (
+    !model.roles ||
+    typeof model.roles !== 'object' ||
+    Array.isArray(model.roles)
+  )
+    throw new ConfigError('Invalid authorization roles');
+  const rawRoles = object(model.roles, Object.keys(model.roles));
+  if (Object.keys(rawRoles).length > 50)
+    throw new ConfigError('Too many authorization roles');
+  const roleEntries = Object.entries(rawRoles).map(
+    ([name, values]) =>
+      [
+        identifier(name),
+        unique(
+          list(values, 100).map((entry) => {
+            if (entry === '*') return '*';
+            const parsed = permission(entry);
+            if (!permissions.includes(parsed))
+              throw new ConfigError('Role references an unknown permission');
+            return parsed;
+          }),
+        ),
+      ] as const,
+  );
+  unique(roleEntries.map(([name]) => name));
+  const resources = list(model.resources, 1000).map((value) => {
+    const resource = object(value, ['type', 'id', 'parent']);
+    const type = identifier(resource.type);
+    if (
+      typeof resource.id !== 'string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(resource.id)
+    )
+      throw new ConfigError('Invalid resource ID');
+    return {
+      type,
+      id: resource.id,
+      ...(resource.parent === undefined
+        ? {}
+        : { parent: resourceKey(resource.parent) }),
+    };
+  });
+  const keys = unique(resources.map((entry) => `${entry.type}:${entry.id}`));
+  if (
+    resources.some(
+      (entry) => entry.parent !== undefined && !keys.includes(entry.parent),
+    )
+  )
+    throw new ConfigError('Resource parent does not exist');
+  for (const start of keys) {
+    const visited = new Set<string>();
+    let current: string | undefined = start;
+    while (current) {
+      if (visited.has(current)) throw new ConfigError('Resource cycle');
+      visited.add(current);
+      current = resources.find(
+        (entry) => `${entry.type}:${entry.id}` === current,
+      )?.parent;
+    }
+  }
+  return { permissions, roles: Object.fromEntries(roleEntries), resources };
+}
+
 export function validatePolicy(value: unknown): Policy {
   const root = object(value, [
     'version',
@@ -77,6 +177,7 @@ export function validatePolicy(value: unknown): Policy {
         'solanaChains',
         'requiredRoles',
         'approvalThreshold',
+        'authorization',
       ]);
       if (typeof app.origin !== 'string')
         throw new ConfigError('Application origin is required');
@@ -157,6 +258,9 @@ export function validatePolicy(value: unknown): Policy {
         solanaChains,
         requiredRoles: roles(app.requiredRoles),
         approvalThreshold,
+        ...(app.authorization === undefined
+          ? {}
+          : { authorization: authorizationModel(app.authorization) }),
       };
     },
   );
@@ -175,7 +279,12 @@ export function validatePolicy(value: unknown): Policy {
   const appIds = unique(applications.map((app) => app.id));
   const walletKeys = new Set<string>();
   const identities = list(root.identities, 1000).map((value): Identity => {
-    const identity = object(value, ['id', 'wallets', 'grants']);
+    const identity = object(value, [
+      'id',
+      'wallets',
+      'grants',
+      'resourceGrants',
+    ]);
     const wallets = list(identity.wallets, 20).map(
       (value): Identity['wallets'][number] => {
         const wallet = object(value, ['network', 'address', 'enabled']);
@@ -204,12 +313,74 @@ export function validatePolicy(value: unknown): Policy {
       },
     );
     const grants = object(identity.grants, appIds);
+    const resourceGrants =
+      identity.resourceGrants === undefined
+        ? undefined
+        : object(identity.resourceGrants, appIds);
+    const parsedResourceGrants =
+      resourceGrants === undefined
+        ? undefined
+        : Object.fromEntries(
+            Object.entries(resourceGrants).map(([application, values]) => {
+              const model = applications.find(
+                (entry) => entry.id === application,
+              )?.authorization;
+              if (!model)
+                throw new ConfigError(
+                  'Resource grants require an authorization model',
+                );
+              return [
+                application,
+                list(values, 500).map((value) => {
+                  const grant = object(value, [
+                    'role',
+                    'resource',
+                    'expiresAt',
+                  ]);
+                  const role = identifier(grant.role);
+                  const resource = resourceKey(grant.resource);
+                  const [type] = resource.split(':');
+                  if (!Object.hasOwn(model.roles, role))
+                    throw new ConfigError('Resource grant role is unknown');
+                  if (
+                    !resource.endsWith(':*') &&
+                    !model.resources.some(
+                      (entry) => `${entry.type}:${entry.id}` === resource,
+                    )
+                  )
+                    throw new ConfigError('Resource grant is unknown');
+                  if (
+                    resource.endsWith(':*') &&
+                    !model.resources.some((entry) => entry.type === type)
+                  )
+                    throw new ConfigError('Resource type is unknown');
+                  if (
+                    grant.expiresAt !== undefined &&
+                    (typeof grant.expiresAt !== 'number' ||
+                      !Number.isSafeInteger(grant.expiresAt) ||
+                      grant.expiresAt < 1)
+                  )
+                    throw new ConfigError('Invalid resource grant expiry');
+                  return {
+                    role,
+                    resource,
+                    ...(grant.expiresAt === undefined
+                      ? {}
+                      : { expiresAt: grant.expiresAt }),
+                  };
+                }),
+              ];
+            }),
+          );
     return {
       id: identifier(identity.id),
       wallets,
       grants: Object.fromEntries(
         Object.entries(grants).map(([app, value]) => [app, roles(value)]),
       ),
+      ...(parsedResourceGrants === undefined
+        ? {}
+        : { resourceGrants: parsedResourceGrants }),
     };
   });
   unique(identities.map((identity) => identity.id));
