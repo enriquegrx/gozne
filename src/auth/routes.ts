@@ -297,6 +297,71 @@ export async function authRoutes(
         .send();
     },
   );
+  // Private forward-auth contract. The proxy, not the browser, selects these
+  // query values and captures the original request method before auth_request.
+  app.get<{
+    Querystring: { application: string; method: string; write_role: string };
+  }>(
+    '/v1/auth/validate-request',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          required: ['application', 'method', 'write_role'],
+          additionalProperties: false,
+          properties: {
+            application: { ...string(64), pattern: '^[a-z][a-z0-9-]*$' },
+            method: { enum: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] },
+            write_role: { ...string(64), pattern: '^[a-z][a-z0-9-]*$' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const session = requireSession(request);
+      if (session.application !== request.query.application)
+        throw new AuthError(
+          403,
+          'APPLICATION_DENIED',
+          'Session is not authorized for this application',
+        );
+      if (request.query.method === 'GET' || request.query.method === 'HEAD') {
+        // A direct bookmark/navigation has no Origin and Sec-Fetch-Site: none.
+        // It must not be rejected as a cross-site API fetch.
+        if (!(
+          request.headers.origin === undefined &&
+          request.headers['sec-fetch-site'] === 'none'
+        ))
+          sameSiteRead(request, session.origin);
+      } else {
+        if (!session.roles.includes(request.query.write_role))
+          throw new AuthError(
+            403,
+            'ROLE_REQUIRED',
+            'Required application role is missing',
+          );
+        originAllowed(request, session.origin);
+        const actual = request.headers['x-csrf-token'];
+        if (
+          typeof actual !== 'string' ||
+          !/^[0-9a-f]{64}$/.test(actual) ||
+          !timingSafeEqual(Buffer.from(actual), Buffer.from(session.csrfToken))
+        )
+          throw new AuthError(
+            403,
+            'CSRF_INVALID',
+            'A valid CSRF token is required',
+          );
+      }
+      return reply
+        .header('X-Gozne-Identity', session.identity)
+        .header('X-Gozne-Role', session.roles.join(','))
+        .header('X-Gozne-Application', session.application)
+        .header('X-Gozne-Session', session.id)
+        .code(200)
+        .send();
+    },
+  );
   app.post('/v1/auth/logout', async (request, reply) => {
     const session = requireSession(request);
     originAllowed(request, session.origin);

@@ -360,6 +360,100 @@ paths:
             type: string
             maxLength: 64
             pattern: ^[a-z][a-z0-9-]*$
+  /v1/auth/validate-request:
+    get:
+      summary:
+        Internal method-aware proxy validation; unsafe methods require role,
+        origin and CSRF
+      responses:
+        '200':
+          description: Success
+          headers:
+            X-Gozne-Identity:
+              schema:
+                type: string
+              description: Internal identity
+            X-Gozne-Role:
+              schema:
+                type: string
+              description: Comma-separated roles
+            X-Gozne-Application:
+              schema:
+                type: string
+              description: Authorized application
+            X-Gozne-Session:
+              schema:
+                type: string
+              description: Public audit ID, not a session token
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid proof or session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Origin or application denied, or invalid CSRF token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Missing policy or unavailable storage; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - SessionCookie: []
+      parameters:
+        - in: query
+          name: application
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+            pattern: ^[a-z][a-z0-9-]*$
+        - in: query
+          name: method
+          required: true
+          schema:
+            type: string
+            enum: [GET, HEAD, POST, PUT, PATCH, DELETE]
+        - in: query
+          name: write_role
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+            pattern: ^[a-z][a-z0-9-]*$
+        - in: header
+          name: Origin
+          schema: { type: string }
+          description:
+            Required on unsafe methods; must match the session origin.
+        - in: header
+          name: X-CSRF-Token
+          schema: { type: string }
+          description:
+            Required on unsafe methods; must match the live session token.
   /v1/auth/logout:
     post:
       summary: Revoke the session and clear cookies

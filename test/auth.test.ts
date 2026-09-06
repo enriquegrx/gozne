@@ -726,3 +726,71 @@ test('a database writer lock fails login closed without consuming its challenge'
     control.close();
   }
 });
+
+test('private request validation binds writes to live role, origin and session CSRF', async (t) => {
+  const f = fixture(t);
+  let session = await login(f);
+  const check = (
+    method: string,
+    extra: Record<string, string> = {},
+    application = 'docs',
+  ) =>
+    f.app.inject({
+      url: `/v1/auth/validate-request?application=${application}&method=${method}&write_role=admin`,
+      headers: {
+        ...browser(session.cookie),
+        'x-csrf-token': session.csrfToken,
+        ...extra,
+      },
+    });
+  assert.equal((await check('GET')).statusCode, 200);
+  assert.equal(
+    (
+      await f.app.inject({
+        url: '/v1/auth/validate-request?application=docs&method=GET&write_role=admin',
+        headers: { cookie: session.cookie, 'sec-fetch-site': 'none' },
+      })
+    ).statusCode,
+    200,
+  );
+
+  assert.equal(
+    (await check('POST', { 'x-gozne-role': 'admin' })).statusCode,
+    403,
+  );
+  f.policy.identities[0]!.grants.docs = ['reader', 'admin'];
+  f.storage.auth.applyPolicy(f.policy);
+  assert.equal((await check('GET')).statusCode, 401);
+  session = await login(f);
+  for (const method of ['POST', 'PATCH', 'PUT', 'DELETE']) {
+    const response = await check(method);
+    assert.equal(response.statusCode, 200, response.body);
+    assert.equal(response.headers['x-gozne-identity'], 'alice');
+    assert.equal((await check(method, { 'x-csrf-token': '' })).statusCode, 403);
+    assert.equal(
+      (await check(method, { 'x-csrf-token': '0'.repeat(64) })).statusCode,
+      403,
+    );
+    assert.equal(
+      (await check(method, { origin: 'https://evil.test' })).statusCode,
+      403,
+    );
+    assert.equal(
+      (await check(method, { 'sec-fetch-site': 'cross-site' })).statusCode,
+      403,
+    );
+  }
+  assert.equal((await check('POST', {}, 'panel')).statusCode, 403);
+  assert.equal((await check('TRACE')).statusCode, 400);
+  assert.equal(
+    (
+      await f.app.inject({
+        url: '/v1/auth/validate-request?application=docs',
+        headers: browser(session.cookie),
+      })
+    ).statusCode,
+    400,
+  );
+  f.storage.auth.revoke(session.id, f.clock.value);
+  assert.equal((await check('POST')).statusCode, 401);
+});

@@ -94,3 +94,26 @@ separate session audience. The default public API registers no control routes.
 Only the backend processes share the local SQLite volume; neither Nginx frontend
 can read it. This is a single-host deployment, not a distributed database
 design. See [private administration](12-PRIVATE-ADMINISTRATION.md).
+
+## Research application write validation
+
+`GET /v1/auth/validate-request?application=quique&method=POST&write_role=admin`
+is the new private forward-auth contract for research records. All three query
+parameters are required. The private proxy captures the original method before
+its auth subrequest and chooses the required write role from its configuration.
+GET/HEAD validate the live session/application and reject conflicting
+origin/fetch metadata. POST/PUT/PATCH/DELETE additionally require that role,
+exact session origin and session-bound X-CSRF-Token. Unknown/missing methods
+fail; legacy validate remains available for existing read-only integrations. The
+same four identity headers are returned, and cookies/CSRF must never be
+forwarded to the protected application.
+
+Every bundled proxy hides validate-request from browsers. The Research Lab
+routing lives in the adjacent app.quique.es repository and requires this Gozne
+capability before enabling its mutations. Deploy matching reviewed commits; old
+gateways fail closed on the new route. No live grants or public administration
+routes change. Run
+`RESEARCH_REPOSITORY=/absolute/path/to/APP.QUIQUE.ES node scripts/test-research-proxy.mjs`
+after building both repositories' images to test real Gozne with the new
+application. It creates only temporary synthetic identities and a disposable
+Compose project.
