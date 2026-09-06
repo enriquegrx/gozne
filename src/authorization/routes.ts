@@ -20,6 +20,21 @@ const checkSchema = {
       maxLength: 97,
       pattern: '^[a-z][a-z0-9-]{0,31}:[A-Za-z0-9][A-Za-z0-9._-]{0,63}$',
     },
+    context: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        environment: {
+          type: 'string',
+          pattern: '^[a-z][a-z0-9-]{0,63}$',
+        },
+        amount: {
+          type: 'integer',
+          minimum: 0,
+          maximum: Number.MAX_SAFE_INTEGER,
+        },
+      },
+    },
   },
 } as const;
 
@@ -87,7 +102,12 @@ export async function authorizationRoutes(
   };
 
   app.post<{
-    Body: { sessionId: string; permission: string; resource: string };
+    Body: {
+      sessionId: string;
+      permission: string;
+      resource: string;
+      context?: AuthorizationCheck['context'];
+    };
   }>(
     '/v1/internal/authorize',
     {
@@ -108,6 +128,9 @@ export async function authorizationRoutes(
       run(authenticate(request.headers.authorization), request.body.sessionId, {
         permission: request.body.permission,
         resource: request.body.resource,
+        ...(request.body.context === undefined
+          ? {}
+          : { context: request.body.context }),
       }),
   );
 
@@ -141,6 +164,73 @@ export async function authorizationRoutes(
           run(application, request.body.sessionId, check),
         ),
       };
+    },
+  );
+
+  app.post<{
+    Body: {
+      sessionId: string;
+      permission: string;
+      resourceType: string;
+      context?: AuthorizationCheck['context'];
+    };
+  }>(
+    '/v1/internal/authorized-resources',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['sessionId', 'permission', 'resourceType'],
+          properties: {
+            sessionId: { type: 'string', format: 'uuid' },
+            permission: checkSchema.properties.permission,
+            resourceType: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9-]{0,31}$',
+            },
+            context: checkSchema.properties.context,
+          },
+        },
+      },
+      config: { rateLimit: { max: 120, timeWindow: 60_000 } },
+    },
+    async (request) => {
+      const application = authenticate(request.headers.authorization);
+      const time = now();
+      const session = store.sessionById(request.body.sessionId, time);
+      if (!session || session.application !== application)
+        throw new AuthError(
+          401,
+          'SESSION_INVALID',
+          'A valid application session is required',
+        );
+      const current = store.policy()!;
+      const resources =
+        current.policy.applications
+          .find((entry) => entry.id === application)
+          ?.authorization?.resources.filter(
+            (resource) => resource.type === request.body.resourceType,
+          )
+          .filter(
+            (resource) =>
+              decide(
+                current.policy,
+                application,
+                session.identity,
+                {
+                  permission: request.body.permission,
+                  resource: `${resource.type}:${resource.id}`,
+                  ...(request.body.context === undefined
+                    ? {}
+                    : { context: request.body.context }),
+                },
+                time,
+                session.roles,
+              ).allowed,
+          )
+          .map((resource) => `${resource.type}:${resource.id}`) ?? [];
+      return { resources, policyRevision: current.digest };
     },
   );
 }

@@ -8,6 +8,8 @@ import {
   webhookActionCapability,
   authenticationCapabilities,
   authorizationCapability,
+  authorizationContextCapability,
+  authorizationLookupCapability,
   version,
 } from '../metadata.js';
 import type { Storage } from '../storage/database.js';
@@ -128,7 +130,11 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
         : [
             ...authenticationCapabilities,
             ...(Object.keys(config.authorizationTokens).length
-              ? [authorizationCapability]
+              ? [
+                  authorizationCapability,
+                  authorizationContextCapability,
+                  authorizationLookupCapability,
+                ]
               : []),
           ],
   }));

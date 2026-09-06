@@ -308,9 +308,11 @@ save uses the same global session invalidation rules described above.
 The editor uses compact line formats so the complete model remains visible for
 review. Permissions use one line each. Roles use `role: permission, permission`.
 Resources use `type:id` or `type:id > parent-type:parent-id`. Grants use
-`identity | role | resource | optional ISO expiry`. The server parses none of
-these strings directly: the browser converts them to the strict JSON contract,
-which the server validates again. See
+`identity | role | resource | optional ISO expiry | optional ISO start | environments | maximum amount`.
+Empty optional columns stay between `|` separators. Amounts are non-negative
+integers in application-defined minor units. The server parses none of these
+strings directly: the browser converts them to the strict JSON contract, which
+the server validates again. See
 [resource authorization](17-RESOURCE-AUTHORIZATION.md) for policy examples and
 the application service API.
 

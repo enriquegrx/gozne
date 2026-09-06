@@ -3,6 +3,10 @@ import type { Policy } from '../policy/policy.js';
 export interface AuthorizationCheck {
   permission: string;
   resource: string;
+  context?: {
+    environment?: string;
+    amount?: number;
+  };
 }
 
 export interface AuthorizationDecision {
@@ -77,7 +81,10 @@ export function decide(
     };
 
   const grants = identity?.resourceGrants?.[applicationId] ?? [];
+  const missingContext = new Set<string>();
+  let conditionFailed = false;
   for (const grant of grants) {
+    if (grant.notBefore !== undefined && grant.notBefore > now) continue;
     if (grant.expiresAt !== undefined && grant.expiresAt <= now) continue;
     const [type] = grant.resource.split(':');
     const applies =
@@ -85,12 +92,42 @@ export function decide(
       (grant.resource.endsWith(':*') &&
         path.some((resource) => resource.startsWith(`${type}:`)));
     if (!applies) continue;
-    if (grantsPermission(model.roles, [grant.role], check.permission))
-      return {
-        allowed: true,
-        reason: `resource-role:${grant.role}@${grant.resource}`,
-      };
+    if (!grantsPermission(model.roles, [grant.role], check.permission))
+      continue;
+    let grantMissingContext = false;
+    let grantConditionFailed = false;
+    if (grant.conditions?.environments) {
+      if (check.context?.environment === undefined) {
+        missingContext.add('environment');
+        grantMissingContext = true;
+      } else if (
+        !grant.conditions.environments.includes(check.context.environment)
+      )
+        grantConditionFailed = true;
+    }
+    if (grant.conditions?.maximumAmount !== undefined) {
+      if (check.context?.amount === undefined) {
+        missingContext.add('amount');
+        grantMissingContext = true;
+      } else if (check.context.amount > grant.conditions.maximumAmount)
+        grantConditionFailed = true;
+    }
+    if (grantMissingContext) continue;
+    if (grantConditionFailed) {
+      conditionFailed = true;
+      continue;
+    }
+    return {
+      allowed: true,
+      reason: `resource-role:${grant.role}@${grant.resource}`,
+    };
   }
+  if (missingContext.size)
+    return {
+      allowed: false,
+      reason: `context-required:${[...missingContext].sort().join(',')}`,
+    };
+  if (conditionFailed) return { allowed: false, reason: 'condition-not-met' };
   return { allowed: false, reason: 'no-matching-grant' };
 }
 
@@ -105,5 +142,15 @@ export function validateAuthorizationCheck(
     )
   )
     throw new Error('Invalid authorization check');
+  if (
+    value.context?.environment !== undefined &&
+    !/^[a-z][a-z0-9-]{0,63}$/.test(value.context.environment)
+  )
+    throw new Error('Invalid authorization environment');
+  if (
+    value.context?.amount !== undefined &&
+    (!Number.isSafeInteger(value.context.amount) || value.context.amount < 0)
+  )
+    throw new Error('Invalid authorization amount');
   return value;
 }

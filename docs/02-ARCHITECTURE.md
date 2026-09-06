@@ -83,7 +83,10 @@ hierarchy. Existing application roles are global bundles; `resourceGrants` limit
 a bundle to a resource, its descendants or a declared type wildcard. The
 application backend asks the private decision API using its own service token
 and the proxy-verified public session ID. Unknown inputs and unavailable state
-deny access. See [resource authorization](17-RESOURCE-AUTHORIZATION.md).
+deny access. Scoped grants can require a time window, one of a bounded set of
+environments and a maximum integer amount. A separate lookup operation returns
+the declared resources visible to a session so an application can filter data
+before returning it. See [resource authorization](17-RESOURCE-AUTHORIZATION.md).
 
 ## Frontend decision
 

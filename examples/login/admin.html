@@ -394,14 +394,15 @@
                       >Scoped grants<textarea
                         id="authorization-grants"
                         rows="7"
-                        placeholder="alice | editor | project:alpha&#10;bob | reader | document:*"
+                        placeholder="alice | editor | project:alpha&#10;bob | approver | workflow:invoices | 2027-01-01T00:00:00Z | 2026-01-01T00:00:00Z | production | 500000"
                       ></textarea>
                     </label>
                   </div>
                   <p class="note">
-                    Grant format: identity | role | resource | optional expiry
-                    as an ISO date. A parent resource must be declared before it
-                    can be referenced.
+                    Grant format: identity | role | resource | optional expiry |
+                    optional start | comma-separated environments | maximum
+                    amount in application minor units. A parent resource must be
+                    declared before it can be referenced.
                   </p>
                   <button type="submit">Save authorization policy</button>
                 </fieldset>
@@ -423,7 +424,18 @@
                       >Resource<input
                         id="authorization-resource"
                         placeholder="document:42"
-                        required
+                        required /></label
+                    ><label
+                      >Environment<input
+                        id="authorization-environment"
+                        placeholder="production" /></label
+                    ><label
+                      >Amount in minor units<input
+                        id="authorization-amount"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="500000"
                     /></label>
                   </div>
                   <button type="submit" class="secondary">

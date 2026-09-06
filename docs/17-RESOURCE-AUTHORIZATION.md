@@ -68,7 +68,12 @@ and no explicit-deny precedence in this version.
           {
             "role": "approver",
             "resource": "workflow:invoices",
-            "expiresAt": 1798761600000
+            "notBefore": 1767225600000,
+            "expiresAt": 1798761600000,
+            "conditions": {
+              "environments": ["production"],
+              "maximumAmount": 500000
+            }
           }
         ]
       }
@@ -79,7 +84,9 @@ and no explicit-deny precedence in this version.
 
 Here `alice` can read every declared resource because `reader` is an application
 role. She can edit document `42` because it is a child of `project:alpha`. Her
-workflow approval expires at the supplied Unix-millisecond time.
+workflow approval is valid only inside its time window, in production and up to
+`500000` minor units. The application defines whether that means cents, wei or
+another indivisible unit.
 
 ## Private decision API
 
@@ -92,7 +99,9 @@ export GOZNE_AUTHORIZATION_TOKENS='{"portal":"replace-with-at-least-32-random-by
 
 The variable is absent from API responses, policy documents and the admin panel.
 Store it in the deployment secret manager. Adding at least one token enables the
-`authorization.resource.v1` capability.
+`authorization.resource.v1` capability. Context conditions and resource lookup
+also advertise `authorization.context.v1` and
+`authorization.lookup-resources.v1`.
 
 After forward authentication, the application receives `X-Gozne-Session`. It can
 submit that public session ID to Gozne across the private service network:
@@ -125,6 +134,17 @@ session ID supplied by its trusted reverse proxy.
 Use `/v1/internal/authorize/batch` to check up to 50 permission-resource pairs
 for one session. This can drive a table or toolbar, but the backend must repeat
 the check immediately before every protected mutation.
+
+`POST /v1/internal/authorized-resources` accepts a session, permission, resource
+type and optional context. It returns the declared resource keys that the
+session may access. Use this to build a server-side filter before loading or
+returning rows. The endpoint is bounded by the policy's 1,000-resource limit.
+
+Checks may include `context.environment` and an integer `context.amount`. If a
+matching grant requires a missing value, Gozne denies with
+`context-required:environment`, `context-required:amount` or both. A supplied
+value outside the grant returns `condition-not-met`. Application-wide roles do
+not carry scoped conditions.
 
 The bundled Nginx entry points return `404` for `/v1/internal/*`. Application
 backends call `gateway:3001` directly on the internal container network. Do not
@@ -162,7 +182,7 @@ inspect or approve; the signed action records exactly what was approved.
 ## Current limits
 
 This version supports role bundles, exact resources, one-parent inheritance,
-type wildcards and optional expiry. Conditions based on amount, environment, IP
-address or arbitrary expressions are not implemented. Teams, lookup of all
-visible resources and an external OpenFGA or SpiceDB adapter remain later
-extensions.
+type wildcards, time windows, environment lists, maximum integer amounts and
+lookup of visible declared resources. IP conditions and arbitrary expressions
+are not implemented. Teams and an external OpenFGA or SpiceDB adapter remain
+later extensions.

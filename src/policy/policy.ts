@@ -26,7 +26,12 @@ export interface AuthorizationModel {
 export interface ResourceGrant {
   role: string;
   resource: string;
+  notBefore?: number;
   expiresAt?: number;
+  conditions?: {
+    environments?: string[];
+    maximumAmount?: number;
+  };
 }
 export interface Identity {
   id: string;
@@ -335,7 +340,9 @@ export function validatePolicy(value: unknown): Policy {
                   const grant = object(value, [
                     'role',
                     'resource',
+                    'notBefore',
                     'expiresAt',
+                    'conditions',
                   ]);
                   const role = identifier(grant.role);
                   const resource = resourceKey(grant.resource);
@@ -354,19 +361,61 @@ export function validatePolicy(value: unknown): Policy {
                     !model.resources.some((entry) => entry.type === type)
                   )
                     throw new ConfigError('Resource type is unknown');
+                  for (const timestamp of [grant.notBefore, grant.expiresAt])
+                    if (
+                      timestamp !== undefined &&
+                      (typeof timestamp !== 'number' ||
+                        !Number.isSafeInteger(timestamp) ||
+                        timestamp < 1)
+                    )
+                      throw new ConfigError(
+                        'Invalid resource grant time boundary',
+                      );
                   if (
-                    grant.expiresAt !== undefined &&
-                    (typeof grant.expiresAt !== 'number' ||
-                      !Number.isSafeInteger(grant.expiresAt) ||
-                      grant.expiresAt < 1)
+                    typeof grant.notBefore === 'number' &&
+                    typeof grant.expiresAt === 'number' &&
+                    grant.notBefore >= grant.expiresAt
                   )
-                    throw new ConfigError('Invalid resource grant expiry');
+                    throw new ConfigError('Invalid resource grant window');
+                  let conditions: ResourceGrant['conditions'];
+                  if (grant.conditions !== undefined) {
+                    const raw = object(grant.conditions, [
+                      'environments',
+                      'maximumAmount',
+                    ]);
+                    const environments =
+                      raw.environments === undefined
+                        ? undefined
+                        : unique(list(raw.environments, 20).map(identifier));
+                    if (
+                      raw.maximumAmount !== undefined &&
+                      (typeof raw.maximumAmount !== 'number' ||
+                        !Number.isSafeInteger(raw.maximumAmount) ||
+                        raw.maximumAmount < 0)
+                    )
+                      throw new ConfigError('Invalid maximum amount');
+                    if (
+                      environments === undefined &&
+                      raw.maximumAmount === undefined
+                    )
+                      throw new ConfigError('Empty grant conditions');
+                    conditions = {
+                      ...(environments === undefined ? {} : { environments }),
+                      ...(raw.maximumAmount === undefined
+                        ? {}
+                        : { maximumAmount: raw.maximumAmount as number }),
+                    };
+                  }
                   return {
                     role,
                     resource,
+                    ...(grant.notBefore === undefined
+                      ? {}
+                      : { notBefore: grant.notBefore as number }),
                     ...(grant.expiresAt === undefined
                       ? {}
-                      : { expiresAt: grant.expiresAt }),
+                      : { expiresAt: grant.expiresAt as number }),
+                    ...(conditions === undefined ? {} : { conditions }),
                   };
                 }),
               ];

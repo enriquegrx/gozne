@@ -34,6 +34,21 @@ const resource = {
   maxLength: 97,
   pattern: '^[a-z][a-z0-9-]{0,31}:(?:\\*|[A-Za-z0-9][A-Za-z0-9._-]{0,63})$',
 };
+const authorizationContext = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    environment: {
+      type: 'string',
+      pattern: '^[a-z][a-z0-9-]{0,63}$',
+    },
+    amount: {
+      type: 'integer',
+      minimum: 0,
+      maximum: Number.MAX_SAFE_INTEGER,
+    },
+  },
+};
 const authorizationModel = object({
   permissions: {
     type: 'array',
@@ -252,7 +267,29 @@ export async function controlRoutes(
                   pattern: '^[a-z][a-z0-9-]{0,63}$',
                 },
                 resource,
+                notBefore: { type: 'integer', minimum: 1 },
                 expiresAt: { type: 'integer', minimum: 1 },
+                conditions: {
+                  type: 'object',
+                  additionalProperties: false,
+                  minProperties: 1,
+                  properties: {
+                    environments: {
+                      type: 'array',
+                      maxItems: 20,
+                      uniqueItems: true,
+                      items: {
+                        type: 'string',
+                        pattern: '^[a-z][a-z0-9-]{0,63}$',
+                      },
+                    },
+                    maximumAmount: {
+                      type: 'integer',
+                      minimum: 0,
+                      maximum: Number.MAX_SAFE_INTEGER,
+                    },
+                  },
+                },
               },
             },
           },
@@ -267,19 +304,30 @@ export async function controlRoutes(
       ),
   );
   app.post<{
-    Body: { identity: string; permission: string; resource: string };
+    Body: {
+      identity: string;
+      permission: string;
+      resource: string;
+      context?: import('../authorization/decision.js').AuthorizationCheck['context'];
+    };
   }>(
     '/v1/auth/control/authorization/inspect',
     {
       schema: {
-        body: object({
-          identity: {
-            type: 'string',
-            pattern: '^[a-z][a-z0-9-]{0,63}$',
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['identity', 'permission', 'resource'],
+          properties: {
+            identity: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9-]{0,63}$',
+            },
+            permission,
+            resource,
+            context: authorizationContext,
           },
-          permission,
-          resource,
-        }),
+        },
       },
     },
     async (request) =>

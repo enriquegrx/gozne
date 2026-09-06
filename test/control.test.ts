@@ -953,7 +953,14 @@ test('panel saves scoped authorization and explains effective access', async (t)
         { type: 'document', id: '42', parent: 'project:alpha' },
       ],
     },
-    grants: [{ identity: 'owner', role: 'editor', resource: 'project:alpha' }],
+    grants: [
+      {
+        identity: 'owner',
+        role: 'editor',
+        resource: 'project:alpha',
+        conditions: { environments: ['production'], maximumAmount: 5_000 },
+      },
+    ],
   });
   assert.equal(update.statusCode, 200, update.body);
   assert.equal(update.json().reauthenticationRequired, true);
@@ -964,6 +971,7 @@ test('panel saves scoped authorization and explains effective access', async (t)
     identity: 'owner',
     permission: 'documents.edit',
     resource: 'document:42',
+    context: { environment: 'production', amount: 5_000 },
   });
   assert.equal(inspection.statusCode, 200, inspection.body);
   assert.deepEqual(
@@ -973,6 +981,14 @@ test('panel saves scoped authorization and explains effective access', async (t)
     },
     { allowed: true, reason: 'resource-role:editor@project:alpha' },
   );
+  const overLimit = await f.post(owner, 'authorization/inspect', {
+    identity: 'owner',
+    permission: 'documents.edit',
+    resource: 'document:42',
+    context: { environment: 'production', amount: 5_001 },
+  });
+  assert.equal(overLimit.statusCode, 200, overLimit.body);
+  assert.equal(overLimit.json().reason, 'condition-not-met');
   const stale = await f.post(owner, 'authorization', {
     revision,
     model: { permissions: [], roles: {}, resources: [] },

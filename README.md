@@ -59,8 +59,9 @@ application when an operation must be reviewed by more than one person.
 - 🍪 **Revocable sessions:** server-side state, secure host-only cookies,
   application roles and CSRF protection.
 - 🧩 **Resource authorization:** permission catalogs, reusable role bundles,
-  scoped grants, parent-child resources, expiry and a private decision API. See
-  the [resource authorization guide](docs/17-RESOURCE-AUTHORIZATION.md).
+  scoped grants, parent-child resources, time and workflow conditions, visible
+  resource lookup and a private decision API. See the
+  [resource authorization guide](docs/17-RESOURCE-AUTHORIZATION.md).
 - ⏱️ **Temporary invitations:** reader access for a specific wallet, expiry and
   immediate revocation, without rewriting the main policy.
 - ✍️ **Signed intent:** exact deployment parameters, fresh proofs from one or

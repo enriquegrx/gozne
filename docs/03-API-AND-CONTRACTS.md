@@ -20,6 +20,7 @@ uses ISO 8601.
 | POST   | `/v1/auth/logout`                    | Revoke current session           | Session, origin and CSRF  |
 | POST   | `/v1/internal/authorize`             | Permission and resource decision | Application service token |
 | POST   | `/v1/internal/authorize/batch`       | Up to 50 ordered decisions       | Application service token |
+| POST   | `/v1/internal/authorized-resources`  | List visible declared resources  | Application service token |
 
 ## Login flow
 

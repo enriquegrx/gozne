@@ -53,7 +53,12 @@ function policy(address: string) {
             {
               role: 'approver',
               resource: 'workflow:invoices',
+              notBefore: 500,
               expiresAt: 2_000,
+              conditions: {
+                environments: ['production'],
+                maximumAmount: 5_000,
+              },
             },
           ],
         },
@@ -103,6 +108,50 @@ test('roles and resource relationships produce deny-by-default decisions', () =>
     ).allowed,
     false,
   );
+  assert.deepEqual(
+    decide(
+      current,
+      'docs',
+      'alice',
+      {
+        permission: 'workflow.approve',
+        resource: 'workflow:invoices',
+      },
+      1_000,
+    ),
+    { allowed: false, reason: 'context-required:amount,environment' },
+  );
+  assert.deepEqual(
+    decide(
+      current,
+      'docs',
+      'alice',
+      {
+        permission: 'workflow.approve',
+        resource: 'workflow:invoices',
+        context: { environment: 'production', amount: 5_000 },
+      },
+      1_000,
+    ),
+    {
+      allowed: true,
+      reason: 'resource-role:approver@workflow:invoices',
+    },
+  );
+  assert.equal(
+    decide(
+      current,
+      'docs',
+      'alice',
+      {
+        permission: 'workflow.approve',
+        resource: 'workflow:invoices',
+        context: { environment: 'staging', amount: 5_001 },
+      },
+      1_000,
+    ).reason,
+    'condition-not-met',
+  );
   assert.equal(
     decide(
       current,
@@ -138,6 +187,13 @@ test('policy rejects missing resource parents and unknown scoped roles', () => {
   const unknownRole = structuredClone(current);
   unknownRole.identities[0]!.resourceGrants!.docs![0]!.role = 'owner';
   assert.throws(() => validatePolicy(unknownRole));
+  const invalidWindow = structuredClone(current);
+  const timed = invalidWindow.identities[0]!.resourceGrants!.docs![1]!;
+  timed.notBefore = timed.expiresAt!;
+  assert.throws(() => validatePolicy(invalidWindow));
+  const fractionalAmount = structuredClone(current);
+  fractionalAmount.identities[0]!.resourceGrants!.docs![1]!.conditions!.maximumAmount = 1.5;
+  assert.throws(() => validatePolicy(fractionalAmount));
 });
 
 test('private decision API authenticates the application and resolves a live session', async (t) => {
@@ -213,4 +269,16 @@ test('private decision API authenticates the application and resolves a live ses
     },
     { allowed: false, reason: 'no-matching-grant' },
   );
+  const visible = await app.inject({
+    method: 'POST',
+    url: '/v1/internal/authorized-resources',
+    headers: { authorization: `Bearer ${applicationToken}` },
+    payload: {
+      sessionId,
+      permission: 'documents.edit',
+      resourceType: 'document',
+    },
+  });
+  assert.equal(visible.statusCode, 200, visible.body);
+  assert.deepEqual(visible.json().resources, ['document:42']);
 });

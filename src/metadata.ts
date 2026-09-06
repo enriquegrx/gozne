@@ -20,6 +20,10 @@ export const authenticationCapabilities = [
   'forward-auth.request.v1',
 ] as const;
 export const authorizationCapability = 'authorization.resource.v1' as const;
+export const authorizationContextCapability =
+  'authorization.context.v1' as const;
+export const authorizationLookupCapability =
+  'authorization.lookup-resources.v1' as const;
 
 export const administrationCapability = 'control.admin.v1' as const;
 export const approvalThresholdCapability =

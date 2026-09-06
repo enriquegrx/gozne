@@ -575,9 +575,15 @@ export class ControlStore {
       entries.push({
         role: grant.role,
         resource: grant.resource,
+        ...(grant.notBefore === undefined
+          ? {}
+          : { notBefore: grant.notBefore }),
         ...(grant.expiresAt === undefined
           ? {}
           : { expiresAt: grant.expiresAt }),
+        ...(grant.conditions === undefined
+          ? {}
+          : { conditions: grant.conditions }),
       });
       byIdentity.set(grant.identity, entries);
     }

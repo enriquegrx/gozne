@@ -15,6 +15,38 @@
       .split(',')
       .map((entry) => entry.trim())
       .filter(Boolean);
+  function explain(reason) {
+    if (reason.startsWith('application-role:'))
+      return t('Application role: {role}').replace(
+        '{role}',
+        reason.slice('application-role:'.length),
+      );
+    if (reason.startsWith('resource-role:'))
+      return t('Scoped grant: {grant}').replace(
+        '{grant}',
+        reason.slice('resource-role:'.length),
+      );
+    if (reason.startsWith('context-required:'))
+      return t('Required context: {fields}').replace(
+        '{fields}',
+        reason
+          .slice('context-required:'.length)
+          .split(',')
+          .map((field) => t(field))
+          .join(', '),
+      );
+    return t(
+      {
+        'condition-not-met': 'Grant conditions were not met.',
+        'no-matching-grant': 'No matching grant.',
+        'permission-unknown': 'Unknown permission.',
+        'resource-unknown': 'Unknown resource.',
+        'identity-unknown': 'Unknown identity.',
+        'authorization-model-unavailable':
+          'Authorization model is not configured.',
+      }[reason] ?? reason,
+    );
+  }
 
   function show(data) {
     state = data;
@@ -29,9 +61,18 @@
       )
       .join('\n');
     el('#authorization-grants').value = data.grants
-      .map(
-        (grant) =>
-          `${grant.identity} | ${grant.role} | ${grant.resource}${grant.expiresAt ? ` | ${new Date(grant.expiresAt).toISOString()}` : ''}`,
+      .map((grant) =>
+        [
+          grant.identity,
+          grant.role,
+          grant.resource,
+          grant.expiresAt ? new Date(grant.expiresAt).toISOString() : '',
+          grant.notBefore ? new Date(grant.notBefore).toISOString() : '',
+          grant.conditions?.environments?.join(', ') ?? '',
+          grant.conditions?.maximumAmount ?? '',
+        ]
+          .join(' | ')
+          .replace(/(?: \| )+$/, ''),
       )
       .join('\n');
     const identities = el('#authorization-identity');
@@ -89,19 +130,41 @@
 
   function parseGrants() {
     return lines(el('#authorization-grants').value).map((line) => {
-      const [identity, role, resource, expiry, ...extra] = line
-        .split('|')
-        .map((part) => part.trim());
+      const [
+        identity,
+        role,
+        resource,
+        expiry,
+        start,
+        environments,
+        maximumAmount,
+        ...extra
+      ] = line.split('|').map((part) => part.trim());
       if (!identity || !role || !resource || extra.length)
         throw new Error(t('Invalid scoped grant line.'));
       const expiresAt = expiry ? Date.parse(expiry) : undefined;
+      const notBefore = start ? Date.parse(start) : undefined;
       if (expiry && !Number.isSafeInteger(expiresAt))
         throw new Error(t('Invalid grant expiry.'));
+      if (start && !Number.isSafeInteger(notBefore))
+        throw new Error(t('Invalid grant start.'));
+      const amount = maximumAmount ? Number(maximumAmount) : undefined;
+      if (
+        maximumAmount &&
+        (!Number.isSafeInteger(amount) || Number(amount) < 0)
+      )
+        throw new Error(t('Invalid maximum amount.'));
+      const conditions = {
+        ...(environments ? { environments: csv(environments) } : {}),
+        ...(amount === undefined ? {} : { maximumAmount: amount }),
+      };
       return {
         identity,
         role,
         resource,
+        ...(notBefore === undefined ? {} : { notBefore }),
         ...(expiresAt === undefined ? {} : { expiresAt }),
+        ...(Object.keys(conditions).length ? { conditions } : {}),
       };
     });
   }
@@ -161,12 +224,22 @@
           identity: el('#authorization-identity').value,
           permission: el('#authorization-permission').value.trim(),
           resource: el('#authorization-resource').value.trim(),
+          context: {
+            ...(el('#authorization-environment').value.trim()
+              ? {
+                  environment: el('#authorization-environment').value.trim(),
+                }
+              : {}),
+            ...(el('#authorization-amount').value === ''
+              ? {}
+              : { amount: Number(el('#authorization-amount').value) }),
+          },
         },
         { 'X-CSRF-Token': window.gozneSession.csrfToken },
       );
       const result = el('#authorization-result');
       result.className = `decision ${decision.allowed ? 'decision-allowed' : 'decision-denied'}`;
-      result.textContent = `${decision.allowed ? t('Allowed') : t('Denied')} · ${decision.reason}`;
+      result.textContent = `${decision.allowed ? t('Allowed') : t('Denied')} · ${explain(decision.reason)}`;
     });
   });
   if (window.gozneSession?.roles.includes('admin')) load();

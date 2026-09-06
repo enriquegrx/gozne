@@ -192,21 +192,37 @@
     'Role bundles': 'Conjuntos de roles',
     'Resource hierarchy': 'Jerarquía de recursos',
     'Scoped grants': 'Concesiones con ámbito',
-    'Grant format: identity | role | resource | optional expiry as an ISO date. A parent resource must be declared before it can be referenced.':
-      'Formato: identidad | rol | recurso | caducidad ISO opcional. Un recurso padre debe declararse antes de poder referenciarlo.',
+    'Grant format: identity | role | resource | optional expiry | optional start | comma-separated environments | maximum amount in application minor units. A parent resource must be declared before it can be referenced.':
+      'Formato: identidad | rol | recurso | caducidad opcional | inicio opcional | entornos separados por comas | importe máximo en unidades menores de la aplicación. Un recurso padre debe declararse antes de poder referenciarlo.',
     'Save authorization policy': 'Guardar política de autorización',
     'Access inspector': 'Inspector de acceso',
     Permission: 'Permiso',
     Resource: 'Recurso',
+    'Amount in minor units': 'Importe en unidades menores',
     'Check effective access': 'Comprobar acceso efectivo',
     Allowed: 'Permitido',
     Denied: 'Denegado',
+    'Application role: {role}': 'Rol de aplicación: {role}',
+    'Scoped grant: {grant}': 'Concesión con ámbito: {grant}',
+    'Required context: {fields}': 'Contexto obligatorio: {fields}',
+    environment: 'entorno',
+    amount: 'importe',
+    'Grant conditions were not met.':
+      'No se cumplen las condiciones de la concesión.',
+    'No matching grant.': 'No hay ninguna concesión aplicable.',
+    'Unknown permission.': 'Permiso desconocido.',
+    'Unknown resource.': 'Recurso desconocido.',
+    'Unknown identity.': 'Identidad desconocida.',
+    'Authorization model is not configured.':
+      'El modelo de autorización no está configurado.',
     'Each role needs a colon.': 'Cada rol necesita dos puntos.',
     'Invalid resource hierarchy line.':
       'La línea de jerarquía de recursos no es válida.',
     'Invalid scoped grant line.':
       'La línea de concesión con ámbito no es válida.',
     'Invalid grant expiry.': 'La caducidad de la concesión no es válida.',
+    'Invalid grant start.': 'El inicio de la concesión no es válido.',
+    'Invalid maximum amount.': 'El importe máximo no es válido.',
     'Reload authorization first.': 'Recarga primero la autorización.',
     'Authorization saved. Sign in again to use the new policy.':
       'Autorización guardada. Inicia sesión otra vez para usar la política nueva.',

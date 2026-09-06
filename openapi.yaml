@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.17
+  version: 0.1.0-dev.18
   description:
     Alpha EVM/SIWS authentication and signed action controls. API and login
     require the same HTTPS origin within each surface. Control paths exist only
@@ -68,6 +68,8 @@ paths:
                         - forward-auth.session.v1
                         - forward-auth.request.v1
                         - authorization.resource.v1
+                        - authorization.context.v1
+                        - authorization.lookup-resources.v1
                         - control.admin.v1
                         - control.approval-threshold.v1
                         - audit.export-chain.v1
@@ -1627,6 +1629,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/internal/authorized-resources:
+    post:
+      summary: List declared resources visible to one live session
+      description:
+        Returns only declared resources of the requested type for which the
+        permission decision allows access under the supplied context.
+      security:
+        - ApplicationServiceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sessionId, permission, resourceType]
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                permission:
+                  $ref: '#/components/schemas/Permission'
+                resourceType:
+                  type: string
+                  pattern: ^[a-z][a-z0-9-]{0,31}$
+                context:
+                  $ref: '#/components/schemas/AuthorizationContext'
+      responses:
+        '200':
+          description: Accessible resource keys and evaluated policy revision
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [resources, policyRevision]
+                properties:
+                  resources:
+                    type: array
+                    maxItems: 1000
+                    items:
+                      $ref: '#/components/schemas/ResourceKey'
+                  policyRevision:
+                    type: string
+                    pattern: ^[a-f0-9]{64}$
+        '401':
+          description: Invalid service credential or application session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /v1/auth/control/authorization:
     get:
       summary: Read the current application's authorization model and grants
@@ -1704,6 +1757,8 @@ paths:
                   $ref: '#/components/schemas/Permission'
                 resource:
                   $ref: '#/components/schemas/ResourceKey'
+                context:
+                  $ref: '#/components/schemas/AuthorizationContext'
       responses:
         '200':
           description: Effective decision and reason
@@ -1988,11 +2043,41 @@ components:
           type: string
           description:
             Exact resource key or a declared type wildcard such as document:*
+        notBefore:
+          type: integer
+          minimum: 1
+          description:
+            Optional Unix-millisecond start; earlier checks never match
         expiresAt:
           type: integer
           minimum: 1
           description:
             Optional Unix-millisecond expiry; expired grants never match
+        conditions:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            environments:
+              type: array
+              maxItems: 20
+              uniqueItems: true
+              items: *id001
+            maximumAmount:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+              description: Maximum amount in application-defined minor units
+    AuthorizationContext:
+      type: object
+      additionalProperties: false
+      properties:
+        environment: *id001
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: Amount in application-defined minor units
     AuthorizationCheck:
       type: object
       additionalProperties: false
@@ -2002,6 +2087,8 @@ components:
           $ref: '#/components/schemas/Permission'
         resource:
           $ref: '#/components/schemas/ResourceKey'
+        context:
+          $ref: '#/components/schemas/AuthorizationContext'
     AuthorizationRequest:
       allOf:
         - $ref: '#/components/schemas/AuthorizationCheck'
