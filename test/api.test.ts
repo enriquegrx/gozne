@@ -28,7 +28,7 @@ test('health, version and unconfigured authentication expose the expected contra
   assert.notEqual(health.headers['x-request-id'], 'client-controlled');
   assert.deepEqual((await app.inject('/version')).json(), {
     name: 'gozne',
-    version: '0.1.0-dev.11',
+    version: '0.1.0-dev.12',
     stage: 'alpha',
     surface: 'public',
     authentication: true,

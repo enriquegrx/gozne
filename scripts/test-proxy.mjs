@@ -202,7 +202,9 @@ try {
     (await http(`/v1/auth/validate?application=${application}`)).status,
     404,
   );
-  assert.equal((await http('/private/')).status, 302);
+  const anonymousPrivate = await http('/private/');
+  assert.equal(anonymousPrivate.status, 302);
+  assert.equal(anonymousPrivate.headers.location, '/');
   const cookieFrom = (response, name) => {
     const cookie = response.headers['set-cookie']?.find((entry) =>
       entry.startsWith(`${name}=`),

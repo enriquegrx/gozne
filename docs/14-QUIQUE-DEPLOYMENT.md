@@ -125,3 +125,8 @@ Before changing the protected upstream, read `/version` through the public HTTPS
 origin and require `forward-auth.request.v1` in `capabilities`. A missing
 capability means the gateway is too old for Research Lab mutations; keep the
 existing upstream and fail the deployment before routing user traffic.
+
+Anonymous protected requests redirect with a relative `Location: /`. Keep
+`absolute_redirect off` in the named login location: the public Nginx receives
+plain HTTP from Cloudflare on an internal container port and must never expose
+that scheme or port in a browser redirect.
