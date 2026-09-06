@@ -50,8 +50,9 @@ authoritative.
 running version, `public` or `admin` surface, and stable capability identifiers.
 Integrations that need method-aware writes must require
 `forward-auth.request.v1` before switching their protected upstream. The admin
-surface additionally advertises `control.admin.v1`. Unknown capabilities must be
-ignored so Gozne can add compatible behavior without breaking consumers.
+surface additionally advertises `control.admin.v1` and
+`control.approval-threshold.v1`. Unknown capabilities must be ignored so Gozne
+can add compatible behavior without breaking consumers.
 
 This endpoint reports code capabilities, not operational readiness. Check
 `/healthz`, validate the deployment topology, and complete a real authenticated
@@ -86,21 +87,22 @@ optional exact `event` filter. Each event includes its sequence, time, type,
 actor identity and public session ID. The response never contains session
 tokens, token hashes, signatures or signed payloads.
 
-| Method | Suffix                     | Required actor                               |
-| ------ | -------------------------- | -------------------------------------------- |
-| GET    | (none)                     | Any valid session                            |
-| GET    | `/audit`                   | Administrator                                |
-| POST   | `/invitations`             | Administrator with reader access             |
-| POST   | `/invitations/{id}/revoke` | Administrator                                |
-| POST   | `/actions`                 | Any valid session                            |
-| POST   | `/actions/{id}/challenge`  | Administrator                                |
-| POST   | `/actions/{id}/approve`    | Administrator and fresh wallet proof         |
-| POST   | `/actions/{id}/execute`    | Original requesting session                  |
-| POST   | `/actions/{id}/cancel`     | Original requesting session or administrator |
+| Method | Suffix                     | Required actor                                |
+| ------ | -------------------------- | --------------------------------------------- |
+| GET    | (none)                     | Any valid session                             |
+| GET    | `/audit`                   | Administrator                                 |
+| POST   | `/invitations`             | Administrator with reader access              |
+| POST   | `/invitations/{id}/revoke` | Administrator                                 |
+| POST   | `/actions`                 | Any valid session                             |
+| POST   | `/actions/{id}/challenge`  | Administrator                                 |
+| POST   | `/actions/{id}/approve`    | Distinct administrator and fresh wallet proof |
+| POST   | `/actions/{id}/execute`    | Original requesting session                   |
+| POST   | `/actions/{id}/cancel`     | Original requesting session or administrator  |
 
 Read the [control contract and walkthrough](11-CONTROL-PANEL.md) for bodies,
-state transitions, timing and limitations. Only the deployment simulation is
-implemented; there is no generic arbitrary-command execution endpoint.
+state transitions, timing, approval thresholds and limitations. Only the
+deployment simulation is implemented; there is no generic arbitrary-command
+execution endpoint.
 
 ## Forward-auth contract
 

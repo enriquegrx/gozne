@@ -8,25 +8,25 @@ protection offered by wallet signatures.
 
 ## Controls
 
-| Threat                               | Implemented control                                                 |
-| ------------------------------------ | ------------------------------------------------------------------- |
-| Replayed login signature             | Unique nonce, short TTL, browser binding and atomic consumption     |
-| Valid signature for another site     | Exact domain, URI, origin, application and chain binding            |
-| Altered message                      | Exact comparison with the server-issued message                     |
-| Public wallet enumeration            | Uniform invalid-proof response and bounded delay                    |
-| Stolen session                       | Secure host-only HttpOnly cookie, rotation, TTL and live revocation |
-| CSRF                                 | SameSite, exact Origin, Fetch Metadata and session CSRF token       |
-| Forged proxy identity                | Explicit header allowlist at the reverse proxy                      |
-| Invitation forwarding                | Authorization bound to the invited public address                   |
-| Invitation bypass of disabled wallet | Static policy takes precedence over guest access                    |
-| Privilege escalation                 | Live server-side application roles; guests cannot grant admin       |
-| Reused or substituted approval       | Fresh nonce, action ID, exact payload hash, signer/session binding  |
-| Double execution                     | Effect, consumption and audit in the same SQLite transaction        |
-| Revoked requester or signer          | Both sessions rechecked before execution                            |
-| Failed persistence                   | Roll back and deny; no successful response before commit            |
-| API abuse                            | Per-IP rate limits, nonce limits and pending-action limits          |
-| XSS in the example panel             | Local scripts, strict CSP, text-only DOM insertion                  |
-| Secret leakage in logs               | No request URLs, bodies, cookies, signatures or IPs logged          |
+| Threat                               | Implemented control                                                    |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| Replayed login signature             | Unique nonce, short TTL, browser binding and atomic consumption        |
+| Valid signature for another site     | Exact domain, URI, origin, application and chain binding               |
+| Altered message                      | Exact comparison with the server-issued message                        |
+| Public wallet enumeration            | Uniform invalid-proof response and bounded delay                       |
+| Stolen session                       | Secure host-only HttpOnly cookie, rotation, TTL and live revocation    |
+| CSRF                                 | SameSite, exact Origin, Fetch Metadata and session CSRF token          |
+| Forged proxy identity                | Explicit header allowlist at the reverse proxy                         |
+| Invitation forwarding                | Authorization bound to the invited public address                      |
+| Invitation bypass of disabled wallet | Static policy takes precedence over guest access                       |
+| Privilege escalation                 | Live server-side application roles; guests cannot grant admin          |
+| Reused or substituted approval       | Fresh nonce, exact payload hash, identity uniqueness and live sessions |
+| Double execution                     | Effect, consumption and audit in the same SQLite transaction           |
+| Revoked requester or signer          | Both sessions rechecked before execution                               |
+| Failed persistence                   | Roll back and deny; no successful response before commit               |
+| API abuse                            | Per-IP rate limits, nonce limits and pending-action limits             |
+| XSS in the example panel             | Local scripts, strict CSP, text-only DOM insertion                     |
+| Secret leakage in logs               | No request URLs, bodies, cookies, signatures or IPs logged             |
 
 ## Action-specific boundaries
 
@@ -42,12 +42,14 @@ server rechecks state after cryptographic verification and at execution.
 
 The original requesting session must remain live. Signing out and signing back
 in creates a different session and does not transfer execution rights. The
-approver's session must remain live and retain `admin`. A normal restart
-preserves valid approvals, while policy changes and explicit restoration
-invalidate them.
+sessions behind every counted approval must remain live and retain `admin`.
+Approval sets are unique by identity, so extra wallets and sessions for one
+person cannot satisfy a threshold. A normal restart preserves valid approvals,
+while policy changes and explicit restoration invalidate them.
 
-The owner may approve their own request. There is no two-person rule, quorum,
-agent delegation or external execution capability in this alpha.
+The owner may approve their own request. Applications that need separation of
+duties must set a threshold of two or more. There is no agent delegation or
+external execution capability in this alpha.
 
 ## Administrative access
 

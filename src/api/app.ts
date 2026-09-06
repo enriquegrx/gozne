@@ -3,6 +3,7 @@ import Fastify, { LogController } from 'fastify';
 import type { Config } from '../config.js';
 import {
   administrationCapability,
+  approvalThresholdCapability,
   authenticationCapabilities,
   version,
 } from '../metadata.js';
@@ -109,7 +110,11 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
     authentication: true,
     capabilities:
       config.surface === 'admin'
-        ? [...authenticationCapabilities, administrationCapability]
+        ? [
+            ...authenticationCapabilities,
+            administrationCapability,
+            approvalThresholdCapability,
+          ]
         : authenticationCapabilities,
   }));
   void app.register(async (scope) => {

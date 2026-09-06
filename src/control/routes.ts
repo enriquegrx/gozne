@@ -70,35 +70,53 @@ export async function controlRoutes(
         body: object({
           revision: { type: 'string', pattern: '^[a-f0-9]{64}$' },
           create: { type: 'boolean' },
-          application: object({
-            id: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
-            origin: { type: 'string', maxLength: 256 },
-            adminOrigin: { type: 'string', maxLength: 256 },
-            evmChainIds: {
-              type: 'array',
-              maxItems: 20,
-              uniqueItems: true,
-              items: {
+          application: {
+            ...object({
+              id: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
+              origin: { type: 'string', maxLength: 256 },
+              adminOrigin: { type: 'string', maxLength: 256 },
+              evmChainIds: {
+                type: 'array',
+                maxItems: 20,
+                uniqueItems: true,
+                items: {
+                  type: 'integer',
+                  minimum: 1,
+                  maximum: Number.MAX_SAFE_INTEGER,
+                },
+              },
+              solanaChains: {
+                type: 'array',
+                maxItems: 3,
+                uniqueItems: true,
+                items: {
+                  enum: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+                },
+              },
+              requiredRoles: {
+                type: 'array',
+                maxItems: 20,
+                uniqueItems: true,
+                items: {
+                  type: 'string',
+                  pattern: '^[a-z][a-z0-9-]{0,63}$',
+                },
+              },
+              approvalThreshold: {
                 type: 'integer',
                 minimum: 1,
-                maximum: Number.MAX_SAFE_INTEGER,
+                maximum: 10,
               },
-            },
-            solanaChains: {
-              type: 'array',
-              maxItems: 3,
-              uniqueItems: true,
-              items: {
-                enum: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
-              },
-            },
-            requiredRoles: {
-              type: 'array',
-              maxItems: 20,
-              uniqueItems: true,
-              items: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,63}$' },
-            },
-          }),
+            }),
+            required: [
+              'id',
+              'origin',
+              'adminOrigin',
+              'evmChainIds',
+              'solanaChains',
+              'requiredRoles',
+            ],
+          },
         }),
       },
     },

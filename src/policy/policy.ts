@@ -10,6 +10,7 @@ export interface Application {
   evmChainIds: number[];
   solanaChains: string[];
   requiredRoles: string[];
+  approvalThreshold?: number;
 }
 export interface Identity {
   id: string;
@@ -75,6 +76,7 @@ export function validatePolicy(value: unknown): Policy {
         'evmChainIds',
         'solanaChains',
         'requiredRoles',
+        'approvalThreshold',
       ]);
       if (typeof app.origin !== 'string')
         throw new ConfigError('Application origin is required');
@@ -137,6 +139,14 @@ export function validatePolicy(value: unknown): Policy {
       );
       if (!evmChainIds.length && !solanaChains.length)
         throw new ConfigError('Application must allow at least one chain');
+      const approvalThreshold = app.approvalThreshold ?? 1;
+      if (
+        typeof approvalThreshold !== 'number' ||
+        !Number.isSafeInteger(approvalThreshold) ||
+        approvalThreshold < 1 ||
+        approvalThreshold > 10
+      )
+        throw new ConfigError('Approval threshold must be between 1 and 10');
       return {
         id: identifier(app.id),
         origin: app.origin,
@@ -146,6 +156,7 @@ export function validatePolicy(value: unknown): Policy {
         evmChainIds,
         solanaChains,
         requiredRoles: roles(app.requiredRoles),
+        approvalThreshold,
       };
     },
   );

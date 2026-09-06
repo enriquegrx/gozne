@@ -53,10 +53,10 @@ global high availability or immediate support for all smart wallets.
 
 ## Deferred capabilities
 
-WalletConnect, ERC-1271/ERC-6492, OIDC, passkeys, wallet recovery, quorum
-approvals, agent delegation, real deployment adapters, PostgreSQL and clustering
-are not implemented. A proxy integration alone does not enforce signatures on
-individual application operations.
+WalletConnect, ERC-1271/ERC-6492, OIDC, passkeys, wallet recovery, agent
+delegation, real deployment adapters, PostgreSQL and clustering are not
+implemented. A proxy integration alone does not enforce signatures on individual
+application operations.
 
 ## Success criteria
 

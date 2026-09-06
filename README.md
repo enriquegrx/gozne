@@ -23,9 +23,10 @@ Your application receives a verified identity and roles. It needs no blockchain
 libraries or access to anyone's keys.
 
 > 🛠️ **Working alpha.** EVM and Solana authentication, wallet-bound invitations
-> and a control panel are implemented. Signed deployment approvals run a
-> **simulation**: they record an effect in SQLite and never deploy
-> infrastructure. There is no stable release or external security audit yet.
+> a control panel and configurable multi-person approvals are implemented.
+> Signed deployment approvals run a **simulation**: they record an effect in
+> SQLite and never deploy infrastructure. There is no stable release or external
+> security audit yet.
 
 ## A door for your tools 🔑
 
@@ -39,14 +40,14 @@ Gozne also lets you try a more deliberate workflow:
    public wallet address. Forwarding the URL gives someone else no access.
 2. **Let them request a deployment.** The request names the project, version and
    environment.
-3. **Review and sign it.** An administrator signs that exact request, with an
-   action ID, payload hash and short expiry.
+3. **Review and sign it.** The configured number of distinct administrators sign
+   that exact request, with an action ID, payload hash and short expiry.
 4. **Execute it once.** The requesting session records the simulated deployment.
    A second execution is rejected.
 
-The owner and collaborator use separate browser profiles. The owner can also
-request and approve their own action for a quick single-wallet test; this is
-**not** a two-person approval rule.
+The owner and collaborator use separate browser profiles. The default approval
+threshold is one, so an owner can run a quick single-wallet test. Raise it per
+application when an operation must be reviewed by more than one person.
 
 ## What's included
 
@@ -57,8 +58,8 @@ request and approve their own action for a quick single-wallet test; this is
   application roles and CSRF protection.
 - ⏱️ **Temporary invitations:** reader access for a specific wallet, expiry and
   immediate revocation, without rewriting the main policy.
-- ✍️ **Signed intent:** exact deployment parameters, fresh proof and one-time
-  execution of a local simulation.
+- ✍️ **Signed intent:** exact deployment parameters, fresh proofs from one or
+  more distinct administrators and one-time execution of a local simulation.
 - 🧭 **Multiple applications:** operator-controlled application creation and
   configuration, with separate workspace sign-in. See the
   [application guide](docs/13-APPLICATIONS.md).

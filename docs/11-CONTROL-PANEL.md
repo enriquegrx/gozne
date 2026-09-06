@@ -60,15 +60,18 @@ have different session cookies. Each profile needs its own available wallet.
 6. **Owner:** click Refresh, review the request and click **Sign approval**.
    Read the wallet message: project, version, environment, action ID and payload
    hash belong to this request. Approve with the same wallet account as the
-   administrator session.
+   administrator session. If the application requires more than one approval,
+   repeat this step with distinct administrator identities until the threshold
+   is met.
 7. **Collaborator:** click Refresh and **Execute simulation once**. A receipt
    appears. A repeated API call is rejected; the UI no longer offers execution.
 8. **Owner:** revoke the invitation. The collaborator's existing session loses
    access immediately, including through the protected application's proxy.
 
-For a quick test with one wallet, the administrator can request, approve and
-execute their own action. **This MVP does not enforce two-person approval.** A
-user signing out cannot transfer an existing request to their next session.
+With the default threshold of one, an administrator can request, approve and
+execute their own action. Set **Approvals required** to two or more on the
+application definition when separation of duties is required. A user signing out
+cannot transfer an existing request to their next session.
 
 ## Invitation semantics
 
@@ -98,7 +101,8 @@ all invitations. Server restarts alone preserve them.
 ```mermaid
 stateDiagram-v2
     [*] --> pending: Request exact payload
-    pending --> approved: Fresh administrator proof
+    pending --> pending: Distinct proof below threshold
+    pending --> approved: Required live proofs reached
     approved --> executed: Original session commits simulation
     pending --> canceled: Cancel, policy change or restore
     approved --> canceled: Cancel, policy change or restore
@@ -128,14 +132,21 @@ nonce, issue time and expiry. It cannot be replaced with a login signature.
 
 A request lasts at most 30 minutes and never outlives its requesting session. An
 approval challenge lasts at most five minutes, capped by both the request and
-administrator session. Approval remains valid only until **that same challenge
-deadline**; signing near expiry does not grant another five minutes.
+administrator session. Each approval remains valid only until **its own
+challenge deadline**; signing near expiry does not grant another five minutes.
+An application requires between one and ten distinct administrator identities.
+The request snapshots that threshold, so later display and audit history remain
+unambiguous. A second session or wallet belonging to the same identity cannot
+add another approval. The action becomes executable only while the full set of
+required approvals and the original requesting session remain live.
 
 Issuing another challenge for the same action and administrator session replaces
 the previous one. A matched invalid proof consumes its challenge; a new
-challenge can be requested while the action is pending. Both sessions and live
-permissions are rechecked at approval/execution. Logout, revocation or expiry
-can invalidate a previously approved action.
+challenge can be requested while the action is pending. An identity with a live
+recorded approval cannot sign the same action again. If that approval expires or
+its session is revoked before the threshold is reached, the identity may provide
+a fresh proof. All sessions and permissions are rechecked at execution. Logout,
+revocation or expiry can invalidate a previously approved action.
 
 ## API examples
 
@@ -151,7 +162,7 @@ unknown fields are rejected. All requests use the session's application.
 | `POST /v1/auth/control/invitations/{id}/revoke` | `{}`                                                             | `{"ok":true}`                                                    |
 | `POST /v1/auth/control/actions`                 | Canonical payload fields above                                   | Pending action and payload hash                                  |
 | `POST /v1/auth/control/actions/{id}/challenge`  | `{"chainId":"1"}`                                                | Exact message, nonce, expiry; SIWS input for Solana              |
-| `POST /v1/auth/control/actions/{id}/approve`    | `{"nonce":"…","message":"…","signature":"…"}`                    | Approved action                                                  |
+| `POST /v1/auth/control/actions/{id}/approve`    | `{"nonce":"…","message":"…","signature":"…"}`                    | Updated action and approval progress                             |
 | `POST /v1/auth/control/actions/{id}/execute`    | `{}`                                                             | Executed action and simulated receipt                            |
 | `POST /v1/auth/control/actions/{id}/cancel`     | `{}`                                                             | `{"ok":true}`                                                    |
 
@@ -195,9 +206,8 @@ an archival system; export records externally if policy requires longer
 retention. See [operational limits](08-OPERATIONS.md#current-limits).
 
 Restoration invalidates every invitation and pending approval. See
-[recovery](09-RECOVERY.md). Multi-person approval, scoped agent delegation,
-passkeys, OIDC and real deployment adapters remain on the
-[roadmap](06-ROADMAP.md).
+[recovery](09-RECOVERY.md). Scoped agent delegation, passkeys, OIDC and real
+deployment adapters remain on the [roadmap](06-ROADMAP.md).
 
 ## Active sessions and automatic updates
 
@@ -215,10 +225,12 @@ revoke another session in their application. Missing, expired, already-revoked
 or foreign-application sessions return `404`; the caller's own session returns
 `409 USE_LOGOUT`. Revocation and the administrator audit event share one commit.
 
-Each overview action includes `permissions.approve`, `permissions.execute` and
-`permissions.cancel`. These describe the current session's available controls;
-execution authority is never inferred from matching identity names. The server
-still revalidates every mutation.
+Each overview action includes `requiredApprovals`, the number of currently valid
+approvals in `approvalCount`, the non-secret approval records in `approvals`,
+and `permissions.approve`, `permissions.execute` and `permissions.cancel`. These
+describe the current session's available controls; execution authority is never
+inferred from matching identity names. The server still revalidates every
+mutation.
 
 Auto-refresh runs every 30 seconds while signed in, enabled and visible. It
 skips wallet interactions and other pending operations. Turn it off with the

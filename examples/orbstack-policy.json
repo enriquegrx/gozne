@@ -6,6 +6,7 @@
       "origin": "https://gozne.orb.local",
       "evmChainIds": [1],
       "solanaChains": ["solana:mainnet", "solana:devnet"],
+      "approvalThreshold": 1,
       "requiredRoles": ["reader"],
       "adminOrigin": "https://127.0.0.1:9443"
     }

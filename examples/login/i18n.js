@@ -156,6 +156,7 @@
     'Required roles, comma-separated': 'Roles requeridos, separados por comas',
     'EVM chain IDs, comma-separated': 'IDs de cadena EVM, separados por comas',
     'Solana chains, comma-separated': 'Cadenas Solana, separadas por comas',
+    'Approvals required': 'Aprobaciones requeridas',
     'Saving invalidates all sessions, invitations and pending approvals. New applications grant their creator the required roles and admin access. DNS, TLS and proxy routes must be configured separately.':
       'Guardar invalida todas las sesiones, invitaciones y aprobaciones pendientes. Las aplicaciones nuevas conceden a su creador los roles requeridos y acceso de administración. El DNS, TLS y las rutas del proxy se configuran por separado.',
     'Save application': 'Guardar aplicación',
@@ -253,6 +254,10 @@
       'Solicitado por {requester} · Caduca {expires}',
     'Approved by {approver} · Approval expires {expires}':
       'Aprobado por {approver} · La aprobación caduca {expires}',
+    '{count} of {required} approvals collected':
+      '{count} de {required} aprobaciones reunidas',
+    '{approver} · signed {signed} · expires {expires}':
+      '{approver} · firmó {signed} · caduca {expires}',
     'Sign approval': 'Firmar aprobación',
     'Execute simulation once': 'Ejecutar simulación una vez',
     'Cancel request': 'Cancelar petición',

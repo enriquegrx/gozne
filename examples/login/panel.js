@@ -117,13 +117,13 @@
           `${t(action.payload.environment)} · ${t('Requested by {requester} · Expires {expires}', { requester: short(action.requester), expires: date(action.expiresAt) })}`,
         ),
       );
-      if (action.approvedBy)
+      if (action.requiredApprovals > 1 || action.approvals?.length)
         record.append(
           element(
             'p',
-            t('Approved by {approver} · Approval expires {expires}', {
-              approver: action.approvedBy,
-              expires: date(action.approvalExpiresAt),
+            t('{count} of {required} approvals collected', {
+              count: action.approvalCount,
+              required: action.requiredApprovals,
             }),
           ),
         );
@@ -133,6 +133,18 @@
         element('p', `Action: ${action.id}`),
         element('code', `SHA-256: ${action.payloadHash}`),
       );
+      for (const approval of action.approvals || [])
+        details.append(
+          element(
+            'p',
+            t('{approver} · signed {signed} · expires {expires}', {
+              approver: approval.identity,
+              signed: date(approval.approvedAt),
+              expires: date(approval.expiresAt),
+            }),
+            approval.valid ? 'approval-valid' : 'muted',
+          ),
+        );
       record.append(details);
       const controls = element('div', undefined, 'record-actions');
       if (action.permissions.approve)

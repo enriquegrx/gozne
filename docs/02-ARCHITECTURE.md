@@ -40,13 +40,15 @@ SQLite uses WAL, `synchronous=FULL`, a one-second writer timeout and
 transactional migrations with checksums. Schema 2 introduced policy, nonces,
 sessions and audit. Schema 3 adds invitations, actions, action challenges and
 simulated deployments. Schema 4 scopes audit records to an application so
-administrators can inspect them safely in the private panel. Existing migration
-files are immutable.
+administrators can inspect them safely in the private panel. Schema 5 records
+distinct approval identities and snapshots the required threshold on each
+action. Existing migration files are immutable.
 
 Login consumes its challenge and creates its session in one transaction. An
 approval is revalidated after asynchronous signature verification. Execution
-checks both sessions and commits the simulated effect, consumed action and audit
-event in one SQLite transaction. A write failure rolls everything back.
+checks the requesting session and every required administrator approval, then
+commits the simulated effect, consumed action and audit event in one SQLite
+transaction. A write failure rolls everything back.
 
 This atomicity does not extend to an external API, shell command or deployment
 provider. Such adapters need idempotency, an outbox or equivalent delivery

@@ -25,8 +25,8 @@ configuration, cross-application wallet changes, diagnosis and audit export. The
 web panel manages application-scoped permanent users, wallets and roles as well
 as invitations, sessions and simulated actions. Shared identity wallets remain
 CLI-only. Effective policy edits invalidate authority across the instance. The
-panel currently uses the same-origin JSON API; internal-only administration and
-a separate dashboard container are pending architectural review.
+panel and its same-origin control API run on the private administration surface,
+separate from the public authentication process and network.
 
 ## D-005 — Node.js and TypeScript
 
@@ -118,6 +118,15 @@ consumption are committed together, making concurrent execution reject
 duplicates. An external deployment integration must provide its own
 idempotency/delivery model; do not describe this local guarantee as distributed
 exactly-once execution.
+
+## D-016 — Approval thresholds count identities
+
+Implemented. Each application chooses one to ten required approvals and each
+action snapshots that value when requested. Approval records are unique by
+action and administrator identity, so extra wallets or sessions owned by the
+same identity cannot satisfy a multi-person rule. Every recorded approval must
+still have a live administrator session at execution time. The default remains
+one for compatibility with existing policy files.
 
 ## Separate public authentication from private administration
 

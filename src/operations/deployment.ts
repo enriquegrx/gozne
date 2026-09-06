@@ -1,5 +1,6 @@
 import {
   administrationCapability,
+  approvalThresholdCapability,
   authenticationCapabilities,
 } from '../metadata.js';
 
@@ -138,7 +139,9 @@ export function versionMetadataFinding(
     return failure('Version metadata has an invalid shape or surface');
   const required = [
     ...authenticationCapabilities,
-    ...(surface === 'admin' ? [administrationCapability] : []),
+    ...(surface === 'admin'
+      ? [administrationCapability, approvalThresholdCapability]
+      : []),
   ];
   const missing = required.filter((entry) => !capabilities.includes(entry));
   if (missing.length)

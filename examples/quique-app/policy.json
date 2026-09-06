@@ -8,6 +8,7 @@
       "adminOrigin": "https://127.0.0.1:9543",
       "evmChainIds": [1],
       "solanaChains": ["solana:mainnet"],
+      "approvalThreshold": 1,
       "requiredRoles": ["reader"]
     }
   ],

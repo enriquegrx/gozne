@@ -8,6 +8,7 @@
       "adminOrigin": "https://gozne.quique.es",
       "evmChainIds": [1],
       "solanaChains": ["solana:mainnet"],
+      "approvalThreshold": 1,
       "requiredRoles": ["reader"]
     }
   ],

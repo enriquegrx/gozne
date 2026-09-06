@@ -31,6 +31,13 @@ interface Action {
   approved_at: number | null;
   approval_expires_at: number | null;
   executed_at: number | null;
+  required_approvals: number;
+}
+interface Approval {
+  approver_identity: string;
+  approver_token_hash: string;
+  approved_at: number;
+  expires_at: number;
 }
 const deny = (code = 'ACTION_UNAVAILABLE') =>
   new AuthError(409, code, 'This operation is no longer available');
@@ -102,17 +109,39 @@ export class ControlStore {
     )
       throw deny();
   }
+  private approvals(action: Action, now: number) {
+    return (
+      this.db
+        .prepare(
+          `SELECT approver_identity, approver_token_hash, approved_at, expires_at
+           FROM action_approvals WHERE action_id = ? ORDER BY approved_at`,
+        )
+        .all(action.id) as unknown as Approval[]
+    ).map((approval) => {
+      const session = this.auth.sessionByHash(
+        approval.approver_token_hash,
+        now,
+      );
+      return {
+        identity: approval.approver_identity,
+        approvedAt: approval.approved_at,
+        expiresAt: approval.expires_at,
+        valid:
+          approval.expires_at > now &&
+          session?.application === action.application &&
+          session.identity === approval.approver_identity &&
+          session.roles.includes('admin'),
+      };
+    });
+  }
   private publicAction(action: Action, now: number) {
+    const approvals = this.approvals(action, now);
+    const approvalCount = approvals.filter((approval) => approval.valid).length;
     let available =
       action.expires_at > now &&
       !!this.auth.sessionByHash(action.requester_token_hash, now);
     if (action.status === 'approved')
-      available =
-        available &&
-        (action.approval_expires_at ?? 0) > now &&
-        !!this.auth
-          .sessionByHash(action.approver_token_hash ?? '', now)
-          ?.roles.includes('admin');
+      available = available && approvalCount >= action.required_approvals;
     return {
       id: action.id,
       application: action.application,
@@ -129,6 +158,9 @@ export class ControlStore {
       approvedBy: action.approved_by,
       approvedAt: action.approved_at,
       approvalExpiresAt: action.approval_expires_at,
+      approvals,
+      approvalCount,
+      requiredApprovals: action.required_approvals,
       executedAt: action.executed_at,
     };
   }
@@ -148,7 +180,13 @@ export class ControlStore {
         return {
           ...result,
           permissions: {
-            approve: admin && result.status === 'pending',
+            approve:
+              admin &&
+              result.status === 'pending' &&
+              !result.approvals.some(
+                (approval) =>
+                  approval.identity === actor.identity && approval.valid,
+              ),
             execute: own && result.status === 'approved',
             cancel:
               (own || admin) && ['pending', 'approved'].includes(result.status),
@@ -653,9 +691,14 @@ export class ControlStore {
         environment: input.environment,
       });
       const id = randomUUID();
+      const requiredApprovals =
+        this.auth
+          .policy()!
+          .policy.applications.find((app) => app.id === actor.application)
+          ?.approvalThreshold ?? 1;
       this.db
         .prepare(
-          "INSERT INTO actions(id, application, requester, requester_token_hash, payload, payload_hash, created_at, expires_at, status) VALUES (?,?,?,?,?,?,?,?,'pending')",
+          "INSERT INTO actions(id, application, requester, requester_token_hash, payload, payload_hash, created_at, expires_at, status, required_approvals) VALUES (?,?,?,?,?,?,?,?,'pending',?)",
         )
         .run(
           id,
@@ -666,6 +709,7 @@ export class ControlStore {
           digest(payload),
           now,
           Math.min(now + 1800_000, actor.expiresAt),
+          requiredApprovals,
         );
       this.audit(
         'action.requested',
@@ -683,6 +727,16 @@ export class ControlStore {
       const action = this.action(id, actor.application);
       this.requester(action, now);
       if (action.status !== 'pending') throw deny();
+      if (
+        this.approvals(action, now).some(
+          (approval) => approval.identity === actor.identity && approval.valid,
+        )
+      )
+        throw new AuthError(
+          409,
+          'APPROVAL_EXISTS',
+          'This identity already approved the action',
+        );
       const app = this.auth
         .policy()!
         .policy.applications.find((app) => app.id === actor.application)!;
@@ -790,9 +844,30 @@ export class ControlStore {
       }
       this.db
         .prepare(
-          "UPDATE actions SET status = 'approved', approver_token_hash = ?, approved_by = ?, approved_at = ?, approval_expires_at = ? WHERE id = ?",
+          `INSERT INTO action_approvals(action_id, approver_identity, approver_token_hash, approved_at, expires_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(action_id, approver_identity) DO UPDATE SET
+             approver_token_hash = excluded.approver_token_hash,
+             approved_at = excluded.approved_at,
+             expires_at = excluded.expires_at`,
         )
-        .run(digest(raw), actor.identity, now, fields.expiresAt, id);
+        .run(id, actor.identity, digest(raw), now, fields.expiresAt);
+      const action = this.action(id, actor.application);
+      const liveApprovals = this.approvals(action, now).filter(
+        (approval) => approval.valid,
+      );
+      if (liveApprovals.length >= action.required_approvals)
+        this.db
+          .prepare(
+            "UPDATE actions SET status = 'approved', approver_token_hash = ?, approved_by = ?, approved_at = ?, approval_expires_at = ? WHERE id = ?",
+          )
+          .run(
+            digest(raw),
+            actor.identity,
+            now,
+            Math.min(...liveApprovals.map((approval) => approval.expiresAt)),
+            id,
+          );
       this.audit(
         'action.approved',
         actor.identity,
@@ -814,15 +889,10 @@ export class ControlStore {
           'REQUESTER_REQUIRED',
           'Only the requesting session can execute this action',
         );
-      const approver = this.auth.sessionByHash(
-        action.approver_token_hash ?? '',
-        now,
-      );
       if (
         action.status !== 'approved' ||
-        (action.approval_expires_at ?? 0) <= now ||
-        !approver?.roles.includes('admin') ||
-        approver.application !== actor.application
+        this.approvals(action, now).filter((approval) => approval.valid)
+          .length < action.required_approvals
       )
         throw deny();
       const payload = JSON.parse(action.payload) as DeploymentPayload;

@@ -14,12 +14,13 @@ import { openStorage } from '../src/storage/database.js';
 import { backupDatabase, restoreDatabase } from '../src/storage/recovery.js';
 
 const origin = 'https://control.example.test';
-function fixture(t: TestContext) {
+function fixture(t: TestContext, approvalThreshold = 1) {
   const directory = mkdtempSync(join(tmpdir(), 'gozne-control-'));
   const path = join(directory, 'gozne.sqlite');
   const owner = Wallet.createRandom();
   const guest = Wallet.createRandom();
   const other = Wallet.createRandom();
+  const reviewer = Wallet.createRandom();
   const solKey = ed25519.utils.randomSecretKey();
   const solAddress = base58.encode(ed25519.getPublicKey(solKey));
   const storage = openStorage(path);
@@ -33,6 +34,7 @@ function fixture(t: TestContext) {
         evmChainIds: [1],
         solanaChains: ['solana:devnet'],
         requiredRoles: ['reader'],
+        approvalThreshold,
       },
       {
         id: 'other',
@@ -52,6 +54,15 @@ function fixture(t: TestContext) {
         ],
         grants: { demo: ['reader', 'admin'], other: ['reader', 'admin'] },
       },
+      ...(approvalThreshold > 1
+        ? [
+            {
+              id: 'reviewer',
+              wallets: [{ network: 'evm' as const, address: reviewer.address }],
+              grants: { demo: ['reader', 'admin'] },
+            },
+          ]
+        : []),
     ],
   });
   let now = Date.now();
@@ -155,7 +166,12 @@ function fixture(t: TestContext) {
     assert.equal(result.statusCode, 200, result.body);
     return result.json<{ id: string; payloadHash: string }>();
   }
-  async function approve(browser: Browser, id: string, solana = false) {
+  async function approve(
+    browser: Browser,
+    id: string,
+    solana = false,
+    signingWallet = owner,
+  ) {
     const issue = await post(browser, `actions/${id}/challenge`, {
       chainId: solana ? 'solana:devnet' : '1',
     });
@@ -168,7 +184,7 @@ function fixture(t: TestContext) {
         ? Buffer.from(
             ed25519.sign(new TextEncoder().encode(message), solKey),
           ).toString('base64')
-        : await owner.signMessage(message),
+        : await signingWallet.signMessage(message),
     };
     const response = await post(browser, `actions/${id}/approve`, body);
     assert.equal(response.statusCode, 200, response.body);
@@ -182,6 +198,7 @@ function fixture(t: TestContext) {
     owner,
     guest,
     other,
+    reviewer,
     login,
     post,
     invite,
@@ -268,6 +285,46 @@ test('audit trail is administrator-only, application-scoped and paginated', asyn
   assert.equal(
     (await f.audit(demoOwner, '?before=9999999999999999')).statusCode,
     400,
+  );
+});
+
+test('an approval threshold requires distinct live administrator identities', async (t) => {
+  const f = fixture(t, 2);
+  const owner = await f.login();
+  const reviewer = await f.login(f.reviewer);
+  const action = await f.request(owner);
+
+  await f.approve(owner, action.id);
+  let overview = f.storage.control.overview(owner.raw, Date.now());
+  assert.equal(overview.actions[0]?.status, 'pending');
+  assert.equal(overview.actions[0]?.approvalCount, 1);
+  assert.equal(overview.actions[0]?.requiredApprovals, 2);
+  assert.equal(overview.actions[0]?.permissions.approve, false);
+  assert.equal(
+    (await f.post(owner, `actions/${action.id}/challenge`, { chainId: '1' }))
+      .statusCode,
+    409,
+  );
+  assert.equal(
+    (await f.post(owner, `actions/${action.id}/execute`)).statusCode,
+    409,
+  );
+
+  await f.approve(reviewer, action.id, false, f.reviewer);
+  overview = f.storage.control.overview(owner.raw, Date.now());
+  assert.equal(overview.actions[0]?.status, 'approved');
+  assert.equal(overview.actions[0]?.approvalCount, 2);
+  assert.deepEqual(
+    overview.actions[0]?.approvals.map((approval) => approval.identity),
+    ['owner', 'reviewer'],
+  );
+  assert.equal(
+    overview.actions[0]?.approvalExpiresAt,
+    overview.actions[0]?.approvals[0]?.expiresAt,
+  );
+  assert.equal(
+    (await f.post(owner, `actions/${action.id}/execute`)).statusCode,
+    200,
   );
 });
 
@@ -907,6 +964,13 @@ test('application managers create applications and bootstrap only their own appl
     f.storage.auth.policy()!.policy.identities[0]!.grants.portal,
     ['reader', 'admin'],
   );
+  assert.equal(
+    f.storage.auth
+      .policy()!
+      .policy.applications.find((entry) => entry.id === 'portal')
+      ?.approvalThreshold,
+    1,
+  );
   const portal = await f.login(undefined, 'portal');
   assert.equal(portal.response.statusCode, 200);
   const view = await f.app.inject({
@@ -1002,6 +1066,16 @@ test('application writes validate origins and roll back completely if audit fail
         revision,
         create: true,
         application: { ...application, origin: 'http://portal.example.test' },
+      })
+    ).statusCode,
+    400,
+  );
+  assert.equal(
+    (
+      await f.post(owner, 'applications', {
+        revision,
+        create: true,
+        application: { ...application, approvalThreshold: 11 },
       })
     ).statusCode,
     400,

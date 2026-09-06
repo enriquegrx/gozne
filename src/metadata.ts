@@ -21,3 +21,5 @@ export const authenticationCapabilities = [
 ] as const;
 
 export const administrationCapability = 'control.admin.v1' as const;
+export const approvalThresholdCapability =
+  'control.approval-threshold.v1' as const;

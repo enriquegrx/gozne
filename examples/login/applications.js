@@ -22,6 +22,7 @@
     el('#app-roles').value = (app?.requiredRoles || ['reader']).join(', ');
     el('#app-evm').value = (app?.evmChainIds || [1]).join(', ');
     el('#app-solana').value = (app?.solanaChains || []).join(', ');
+    el('#app-approvals').value = app?.approvalThreshold || 1;
   }
   async function load() {
     const session = window.gozneSession;
@@ -98,6 +99,7 @@
         'app-roles',
         'app-evm',
         'app-solana',
+        'app-approvals',
       ])
         el(`#${id}`).value = '';
       el('#applications-status').textContent = t(
@@ -127,6 +129,7 @@
             requiredRoles: split(el('#app-roles').value),
             evmChainIds: split(el('#app-evm').value).map(Number),
             solanaChains: split(el('#app-solana').value),
+            approvalThreshold: Number(el('#app-approvals').value),
           },
         },
         { 'X-CSRF-Token': window.gozneSession.csrfToken },

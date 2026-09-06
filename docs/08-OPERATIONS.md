@@ -144,7 +144,8 @@ One instance, local SQLite and a correct server clock are required. Login
 challenges last five minutes. Sessions last at most one hour without automatic
 refresh. Reader invitations last 5–1,440 minutes. Action requests last at most
 30 minutes and approval challenges at most five minutes, capped by session and
-request deadlines.
+request deadlines. Each application can require one to ten distinct live
+administrator identities before an action becomes executable.
 
 Nonce, verification and action-proof routes have per-route limits of 20 requests
 per minute per IP; other authentication/control routes use 120. Counters are in

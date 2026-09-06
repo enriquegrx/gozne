@@ -28,7 +28,7 @@ test('health, version and unconfigured authentication expose the expected contra
   assert.notEqual(health.headers['x-request-id'], 'client-controlled');
   assert.deepEqual((await app.inject('/version')).json(), {
     name: 'gozne',
-    version: '0.1.0-dev.13',
+    version: '0.1.0-dev.14',
     stage: 'alpha',
     surface: 'public',
     authentication: true,
@@ -55,6 +55,28 @@ test('health, version and unconfigured authentication expose the expected contra
     (await app.inject({ method: 'POST', url: '/healthz' })).statusCode,
     404,
   );
+});
+
+test('admin version metadata advertises approval thresholds only on the private surface', async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'gozne-admin-version-'));
+  const config = loadConfig({
+    GOZNE_DATABASE: join(directory, 'gozne.sqlite'),
+    GOZNE_LOG_LEVEL: 'silent',
+    GOZNE_SURFACE: 'admin',
+  });
+  const app = buildApp(config, openStorage(config.databasePath));
+  t.after(async () => {
+    await app.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+  assert.deepEqual((await app.inject('/version')).json().capabilities, [
+    'auth.evm.siwe.v1',
+    'auth.solana.siws.v1',
+    'forward-auth.session.v1',
+    'forward-auth.request.v1',
+    'control.admin.v1',
+    'control.approval-threshold.v1',
+  ]);
 });
 
 test('storage failure is closed and errors do not echo internal details', async (t) => {

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.13
+  version: 0.1.0-dev.14
   description:
     Alpha EVM/SIWS authentication and signed simulation controls. API and login
     require the same HTTPS origin within each surface. Control paths exist only
@@ -1722,6 +1722,13 @@ components:
           maxItems: 20
           uniqueItems: true
           items: *id001
+        approvalThreshold:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+          description:
+            Distinct live administrator identities required for an action
     ApplicationDirectory:
       type: object
       additionalProperties: false
@@ -1880,6 +1887,19 @@ components:
           type:
             - integer
             - 'null'
+        requiredApprovals:
+          type: integer
+          minimum: 1
+          maximum: 10
+        approvalCount:
+          type: integer
+          minimum: 0
+          maximum: 10
+        approvals:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/ActionApproval'
         executedAt:
           type:
             - integer
@@ -1896,7 +1916,27 @@ components:
         - approvedBy
         - approvedAt
         - approvalExpiresAt
+        - requiredApprovals
+        - approvalCount
+        - approvals
         - executedAt
+    ActionApproval:
+      type: object
+      additionalProperties: false
+      properties:
+        identity:
+          type: string
+        approvedAt:
+          type: integer
+        expiresAt:
+          type: integer
+        valid:
+          type: boolean
+      required:
+        - identity
+        - approvedAt
+        - expiresAt
+        - valid
     Invitation:
       type: object
       additionalProperties: false
@@ -2181,6 +2221,19 @@ components:
           type:
             - integer
             - 'null'
+        requiredApprovals:
+          type: integer
+          minimum: 1
+          maximum: 10
+        approvalCount:
+          type: integer
+          minimum: 0
+          maximum: 10
+        approvals:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/ActionApproval'
         executedAt:
           type:
             - integer
@@ -2211,6 +2264,9 @@ components:
         - approvedBy
         - approvedAt
         - approvalExpiresAt
+        - requiredApprovals
+        - approvalCount
+        - approvals
         - executedAt
         - permissions
     UserWallet:

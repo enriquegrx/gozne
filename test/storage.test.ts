@@ -24,7 +24,7 @@ test('schema survives restart and database is owner-only', (t) => {
   const second = openStorage(path);
   second.check();
   second.close();
-  assert.equal(inspectStorage(path).schemaVersion, 4);
+  assert.equal(inspectStorage(path).schemaVersion, 5);
 });
 
 test('failed migration rolls back its DDL and migration record', () => {
@@ -36,8 +36,8 @@ test('failed migration rolls back its DDL and migration record', () => {
       migrate(db, [
         ...initial,
         {
-          version: 5,
-          name: '005-broken.sql',
+          version: 6,
+          name: '006-broken.sql',
           sql: 'CREATE TABLE partial (id INTEGER); INSERT INTO missing VALUES (1);',
         },
       ]),
@@ -49,7 +49,7 @@ test('failed migration rolls back its DDL and migration record', () => {
     assert.equal(
       db.prepare('SELECT COUNT(*) AS total FROM schema_migrations').get()
         ?.total,
-      4,
+      5,
     );
     assert.equal(db.isTransaction, false);
   } finally {
@@ -72,8 +72,8 @@ test('changed and newer migration histories are rejected', () => {
       ),
     );
     db.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?, ?)').run(
-      5,
-      '005-future.sql',
+      6,
+      '006-future.sql',
       'synthetic-checksum',
       'test',
     );
@@ -104,10 +104,63 @@ test('audit migration backfills application from an existing session', () => {
     db.prepare(
       'INSERT INTO audit(at, event, identity, session_id) VALUES (?, ?, ?, ?)',
     ).run(1, 'login.succeeded', 'owner', 'session-id');
-    assert.equal(migrate(db, migrations), 4);
+    assert.equal(migrate(db, migrations), 5);
     assert.equal(
       db.prepare('SELECT application FROM audit').get()?.application,
       'demo',
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test('multi-approval migration preserves an existing approval', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const migrations = loadMigrations();
+    migrate(db, migrations.slice(0, 3));
+    db.prepare(
+      `INSERT INTO actions(
+        id, application, requester, requester_token_hash, payload, payload_hash,
+        created_at, expires_at, status, approver_token_hash, approved_by,
+        approved_at, approval_expires_at, executed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+    ).run(
+      'action-id',
+      'demo',
+      'requester',
+      'requester-hash',
+      '{}',
+      'payload-hash',
+      1,
+      10,
+      'approved',
+      'approver-hash',
+      'owner',
+      2,
+      9,
+    );
+    assert.equal(migrate(db, migrations), 5);
+    assert.equal(
+      db.prepare('SELECT required_approvals FROM actions').get()
+        ?.required_approvals,
+      1,
+    );
+    assert.deepEqual(
+      {
+        ...db
+          .prepare(
+            'SELECT action_id, approver_identity, approver_token_hash, approved_at, expires_at FROM action_approvals',
+          )
+          .get(),
+      },
+      {
+        action_id: 'action-id',
+        approver_identity: 'owner',
+        approver_token_hash: 'approver-hash',
+        approved_at: 2,
+        expires_at: 9,
+      },
     );
   } finally {
     db.close();

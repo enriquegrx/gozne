@@ -33,7 +33,8 @@ prevents an administrator from replacing a manager's wallet with their own.
 1. Sign in at the private panel with an authorized manager wallet.
 2. Open **Applications** and choose **New application** or an existing entry.
 3. Set its ID, canonical public HTTPS origin, separate private HTTPS origin,
-   allowed EVM/Solana chains and required roles.
+   allowed EVM/Solana chains, required roles and the number of distinct
+   administrator approvals required for an action.
 4. Save. The creator receives required roles plus `admin` for a new application.
    Existing application grants are preserved on updates.
 5. Configure that application's reverse proxy, DNS and TLS separately. A saved
@@ -44,6 +45,11 @@ avoid current-workspace lockout, the panel rejects changing its own private
 origin or required roles that would exclude the current manager. Such changes
 require a reviewed CLI policy update. All normal policy validations still apply,
 including distinct public/private hostnames and bounded chain/role lists.
+
+The approval threshold is an integer from one to ten and defaults to one when
+omitted by an older policy. Each new action snapshots the current value. Raising
+it requires enough separately configured administrator identities to satisfy the
+rule; multiple wallets or sessions belonging to one identity still count once.
 
 Effective changes invalidate every session, invitation and pending approval in
 the instance. Identical edits are a no-op. Stale revisions return 409, and a
@@ -78,7 +84,8 @@ surface does not register these routes.
 
 ## Upgrade and rollback
 
-No schema migration is required. Back up before changing policy. Older binaries
-will not understand a policy containing `applicationManagers`; rollback requires
-a compatible policy or the pre-upgrade backup. Do not point an older process at
-the new policy while another process is still running the new version.
+Schema 5 stores action approval sets and snapshots each request's threshold.
+Existing approvals migrate as one-person approval sets and existing application
+policies default to a threshold of one. Back up before upgrading or changing
+policy. Older binaries cannot open the migrated database. Rollback requires the
+pre-upgrade backup; do not point an older process at the schema 5 database.

@@ -65,6 +65,16 @@ test('login and panel scripts coexist and render administrator actions without u
     status: 'pending',
     expiresAt: Date.now() + 60000,
     approvedBy: null,
+    approvedAt: null,
+    approvalExpiresAt: null,
+    requiredApprovals: 1,
+    approvalCount: 0,
+    approvals: [] as Array<{
+      identity: string;
+      approvedAt: number;
+      expiresAt: number;
+      valid: boolean;
+    }>,
   };
   const requests: {
     url: string;
@@ -192,6 +202,15 @@ test('login and panel scripts coexist and render administrator actions without u
         };
       if (url.endsWith('/approve')) {
         action.status = 'approved';
+        action.approvalCount = 1;
+        action.approvals = [
+          {
+            identity: 'owner',
+            approvedAt: Date.now(),
+            expiresAt: Date.now() + 60000,
+            valid: true,
+          },
+        ];
         result = action;
       }
       if (url.endsWith('/execute')) {
@@ -344,6 +363,7 @@ test('login and panel scripts coexist and render administrator actions without u
       requiredRoles: ['reader'],
       evmChainIds: [1],
       solanaChains: [],
+      approvalThreshold: 1,
     },
   });
   assert.equal(applicationSave.headers['X-CSRF-Token'], 'csrf');
