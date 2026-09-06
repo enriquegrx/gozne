@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   inspectBoundary,
   certificateFinding,
+  versionMetadataFinding,
 } from '../src/operations/deployment.js';
 import type { ContainerState } from '../src/operations/deployment.js';
 
@@ -109,4 +110,51 @@ test('certificate checks distinguish expiry from the two-day renewal window', ()
     'fail',
   );
   assert.equal(certificateFinding('invalid', now).status, 'fail');
+});
+
+test('deployment diagnostics require surface-specific version capabilities', () => {
+  const publicMetadata = {
+    name: 'gozne',
+    version: '0.1.0-dev.13',
+    stage: 'alpha',
+    surface: 'public',
+    authentication: true,
+    capabilities: [
+      'auth.evm.siwe.v1',
+      'auth.solana.siws.v1',
+      'forward-auth.session.v1',
+      'forward-auth.request.v1',
+    ],
+  };
+  assert.equal(
+    versionMetadataFinding('public', 200, JSON.stringify(publicMetadata))
+      .status,
+    'pass',
+  );
+  assert.equal(
+    versionMetadataFinding(
+      'admin',
+      200,
+      JSON.stringify({
+        ...publicMetadata,
+        surface: 'admin',
+        capabilities: [...publicMetadata.capabilities, 'control.admin.v1'],
+      }),
+    ).status,
+    'pass',
+  );
+  for (const invalid of [
+    { ...publicMetadata, surface: 'admin' },
+    { ...publicMetadata, capabilities: ['forward-auth.session.v1'] },
+    {
+      ...publicMetadata,
+      capabilities: [...publicMetadata.capabilities, 'control.admin.v1'],
+    },
+  ])
+    assert.equal(
+      versionMetadataFinding('public', 200, JSON.stringify(invalid)).status,
+      'fail',
+    );
+  assert.equal(versionMetadataFinding('public', 404, '').status, 'fail');
+  assert.equal(versionMetadataFinding('public', 200, '{').status, 'fail');
 });

@@ -7,6 +7,7 @@ import type { TLSSocket } from 'node:tls';
 import {
   inspectBoundary,
   certificateFinding,
+  versionMetadataFinding,
 } from '../src/operations/deployment.js';
 import type { ContainerState, Finding } from '../src/operations/deployment.js';
 
@@ -123,23 +124,45 @@ try {
   );
 }
 
-async function probe(origin: string, path: string, ca: Buffer | undefined) {
-  return new Promise<{ status: number; expiry: string }>((resolve, reject) => {
-    const req = request(new URL(path, origin), { ca, method: 'GET' }, (res) => {
-      const expiry = (res.socket as TLSSocket).getPeerCertificate().valid_to;
-      res.resume();
-      res.on('end', () => resolve({ status: res.statusCode ?? 0, expiry }));
-      res.on('error', reject);
-    });
-    // Bound DNS, connection and response time together. TLS verification remains enabled.
-    const timer = setTimeout(
-      () => req.destroy(new Error('HTTPS timeout')),
-      5000,
-    );
-    req.on('close', () => clearTimeout(timer));
-    req.on('error', reject);
-    req.end();
-  });
+async function probe(
+  origin: string,
+  path: string,
+  ca: Buffer | undefined,
+  captureBody = false,
+) {
+  return new Promise<{ status: number; expiry: string; body: string }>(
+    (resolve, reject) => {
+      const req = request(
+        new URL(path, origin),
+        { ca, method: 'GET' },
+        (res) => {
+          const expiry = (res.socket as TLSSocket).getPeerCertificate()
+            .valid_to;
+          let body = '';
+          if (captureBody) {
+            res.setEncoding('utf8');
+            res.on('data', (chunk: string) => {
+              body += chunk;
+              if (body.length > 16 * 1024)
+                res.destroy(new Error('HTTPS response is too large'));
+            });
+          } else res.resume();
+          res.on('end', () =>
+            resolve({ status: res.statusCode ?? 0, expiry, body }),
+          );
+          res.on('error', reject);
+        },
+      );
+      // Bound DNS, connection and response time together. TLS verification remains enabled.
+      const timer = setTimeout(
+        () => req.destroy(new Error('HTTPS timeout')),
+        5000,
+      );
+      req.on('close', () => clearTimeout(timer));
+      req.on('error', reject);
+      req.end();
+    },
+  );
 }
 for (const surface of ['public', 'admin'] as const) {
   const origin = values[`${surface}-origin`];
@@ -154,6 +177,10 @@ for (const surface of ['public', 'admin'] as const) {
     )
       throw new Error('Invalid origin');
     const ca = caPath ? readFileSync(caPath) : undefined;
+    const metadata = await probe(origin, '/version', ca, true);
+    findings.push(
+      versionMetadataFinding(surface, metadata.status, metadata.body),
+    );
     const paths: [string, number][] =
       surface === 'public'
         ? [

@@ -127,6 +127,12 @@ fails closed if Gozne is unavailable and may return `500` for a failed
 `auth_request`. `/healthz` checks database reads, not writes or policy
 readiness.
 
+The deployment diagnostic also reads `/version` through each HTTPS surface. It
+requires the expected `public` or `admin` value and the corresponding stable
+capabilities, including method-aware forward authentication. A healthy HTTP
+response from an older or wrongly routed gateway therefore fails the check
+before an application upstream is promoted.
+
 The demo panel assumes `application: 'demo'`. To reuse it for another app,
 update that client identifier, the policy origin and the proxy validation
 application together. Login messages, sessions and action proofs are all

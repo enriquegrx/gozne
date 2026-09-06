@@ -1,3 +1,8 @@
+import {
+  administrationCapability,
+  authenticationCapabilities,
+} from '../metadata.js';
+
 export interface ContainerState {
   service: string;
   running: boolean;
@@ -96,5 +101,53 @@ export function certificateFinding(validTo: string, now = Date.now()): Finding {
     message: Number.isFinite(remaining)
       ? `Certificate expires ${new Date(Date.parse(validTo)).toISOString()}`
       : 'Certificate expiry is unavailable',
+  };
+}
+
+export function versionMetadataFinding(
+  surface: 'public' | 'admin',
+  status: number,
+  body: string,
+): Finding {
+  const failure = (message: string): Finding => ({
+    check: `${surface}.version`,
+    status: 'fail',
+    message,
+  });
+  if (status !== 200) return failure(`HTTP ${status}; expected 200`);
+  let value: unknown;
+  try {
+    value = JSON.parse(body);
+  } catch {
+    return failure('Version metadata is not valid JSON');
+  }
+  if (!value || typeof value !== 'object')
+    return failure('Version metadata is not an object');
+  const metadata = value as Record<string, unknown>;
+  const capabilities = metadata.capabilities;
+  if (
+    metadata.name !== 'gozne' ||
+    metadata.authentication !== true ||
+    metadata.surface !== surface ||
+    typeof metadata.version !== 'string' ||
+    !/^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/.test(metadata.version) ||
+    !Array.isArray(capabilities) ||
+    capabilities.some((entry) => typeof entry !== 'string') ||
+    new Set(capabilities).size !== capabilities.length
+  )
+    return failure('Version metadata has an invalid shape or surface');
+  const required = [
+    ...authenticationCapabilities,
+    ...(surface === 'admin' ? [administrationCapability] : []),
+  ];
+  const missing = required.filter((entry) => !capabilities.includes(entry));
+  if (missing.length)
+    return failure(`Required capabilities missing: ${missing.join(', ')}`);
+  if (surface === 'public' && capabilities.includes(administrationCapability))
+    return failure('Public surface must not advertise administration');
+  return {
+    check: `${surface}.version`,
+    status: 'pass',
+    message: `Gozne ${metadata.version} advertises the required ${surface} capabilities`,
   };
 }
