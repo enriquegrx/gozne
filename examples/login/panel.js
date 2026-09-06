@@ -99,10 +99,7 @@
     const list = select('#action-list');
     list.replaceChildren();
     if (!actions.length)
-      return empty(
-        list,
-        t('No requests yet. Create a simulated deployment above.'),
-      );
+      return empty(list, t('No requests yet. Create an action above.'));
     for (const action of actions) {
       const record = element('article', undefined, 'record');
       const head = element('div', undefined, 'record-head');
@@ -152,8 +149,13 @@
       // Execution remains tied to the original session; the server enforces this even for the same identity.
       if (action.permissions.execute)
         controls.append(
-          button(t('Execute simulation once'), () =>
-            mutate(`actions/${action.id}/execute`),
+          button(
+            t(
+              action.deliveryMode === 'webhook'
+                ? 'Deliver approved action'
+                : 'Execute simulation once',
+            ),
+            () => mutate(`actions/${action.id}/execute`),
           ),
         );
       if (action.permissions.cancel)
@@ -222,25 +224,38 @@
     const list = select('#deployment-list');
     list.replaceChildren();
     if (!deployments.length)
-      return empty(
-        list,
-        t(
-          'Executed simulations will appear here. No infrastructure is changed.',
-        ),
-      );
+      return empty(list, t('Executed action receipts will appear here.'));
     for (const deployment of deployments) {
       const row = element('article', undefined, 'record');
       row.append(
         element('h3', `${deployment.project} / ${deployment.version}`),
         element(
           'p',
-          t('{environment} · Simulated · {date}', {
+          t('{environment} · {mode} · {date}', {
             environment: t(deployment.environment),
+            mode: t(
+              deployment.deliveryMode === 'webhook'
+                ? 'Signed webhook'
+                : 'Simulated',
+            ),
             date: date(deployment.executedAt),
           }),
         ),
         element('code', deployment.actionId),
       );
+      if (
+        deployment.deliveryStatus !== null &&
+        typeof deployment.responseDigest === 'string'
+      )
+        row.append(
+          element(
+            'p',
+            t('Receiver status {status} · Response SHA-256 {digest}', {
+              status: deployment.deliveryStatus,
+              digest: short(deployment.responseDigest),
+            }),
+          ),
+        );
       list.append(row);
     }
   }
@@ -589,7 +604,7 @@
       await mutate('actions', Object.fromEntries(data));
       await refresh();
       select('#status').textContent = t(
-        'Request created. An administrator can now sign the exact deployment.',
+        'Request created. An administrator can now sign the exact action.',
       );
     });
   });

@@ -52,7 +52,8 @@ Integrations that need method-aware writes must require
 `forward-auth.request.v1` before switching their protected upstream. The admin
 surface additionally advertises `control.admin.v1` and
 `control.approval-threshold.v1`. The operator build also reports
-`audit.export-chain.v1`. Unknown capabilities must be ignored so Gozne can add
+`audit.export-chain.v1` and `action.delivery-webhook.v1`, plus the active
+`actionDeliveryMode`. Unknown capabilities must be ignored so Gozne can add
 compatible behavior without breaking consumers.
 
 This endpoint reports code capabilities, not operational readiness. Check
@@ -80,7 +81,9 @@ Fetch Metadata headers. No cross-origin CORS flow is provided.
 ## Control routes
 
 All paths below start with `/v1/auth/control`. They use the current session's
-application; clients cannot select another application in a mutation body.
+application; clients cannot select another application in a mutation body. The
+overview also returns `actionDeliveryMode`; every action and receipt carries its
+own snapshotted `deliveryMode`.
 
 `GET /audit` is administrator-only and returns the newest audit events for that
 application. Use `limit` (1–100), the returned `nextBefore` cursor and an
@@ -101,9 +104,10 @@ tokens, token hashes, signatures or signed payloads.
 | POST   | `/actions/{id}/cancel`     | Original requesting session or administrator  |
 
 Read the [control contract and walkthrough](11-CONTROL-PANEL.md) for bodies,
-state transitions, timing, approval thresholds and limitations. Only the
-deployment simulation is implemented; there is no generic arbitrary-command
-execution endpoint.
+state transitions, timing, approval thresholds and limitations. Actions run as a
+local simulation unless the private process is explicitly configured for the
+[signed webhook adapter](16-ACTION-WEBHOOKS.md). There is no generic
+arbitrary-command execution endpoint.
 
 ## Forward-auth contract
 
@@ -152,7 +156,9 @@ Public login errors do not reveal whether a wallet is authorized. Authenticated
 administrator operations can report actionable conflicts such as
 `INVITATION_EXISTS` or `WALLET_CONFIGURED`. Action failures include
 `ADMIN_REQUIRED`, `REQUESTER_REQUIRED`, `ACTION_UNAVAILABLE` and
-`ACTION_NOT_FOUND`. Never put signatures, cookies or full proofs in error logs.
+`ACTION_NOT_FOUND`. Webhook failures return `ACTION_DELIVERY_FAILED` without
+including the receiver URL or response. Never put signatures, cookies or full
+proofs in error logs.
 
 Bodies reject unknown fields. The global body limit is 16 KiB. See
 [operations](08-OPERATIONS.md) for rate and storage limits.

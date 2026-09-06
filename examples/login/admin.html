@@ -136,7 +136,7 @@
                       </select></label
                     >
                   </div>
-                  <button type="submit">＋ Request simulated deployment</button>
+                  <button type="submit">＋ Request action</button>
                 </fieldset>
               </form>
               <div id="action-list" class="record-list">
@@ -361,9 +361,7 @@
               <div class="section-heading">
                 <div>
                   <h2>Deployment receipts</h2>
-                  <p class="muted">
-                    Simulated effects committed with their approvals.
-                  </p>
+                  <p class="muted">Simulation and signed webhook results.</p>
                 </div>
               </div>
               <div id="deployment-list">
@@ -470,8 +468,8 @@
                 the named project, version and environment.
               </p>
               <p>
-                This demo records simulated deployments. It never runs a
-                deployment or moves funds.
+                Actions use the local simulation unless the operator configures
+                a signed private webhook. Gozne never moves funds.
               </p>
             </section>
             <section class="card quiet">

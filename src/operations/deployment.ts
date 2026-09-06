@@ -3,6 +3,7 @@ import {
   approvalThresholdCapability,
   auditChainCapability,
   authenticationCapabilities,
+  webhookActionCapability,
 } from '../metadata.js';
 
 export interface ContainerState {
@@ -131,6 +132,9 @@ export function versionMetadataFinding(
     metadata.name !== 'gozne' ||
     metadata.authentication !== true ||
     metadata.surface !== surface ||
+    (surface === 'admin' &&
+      metadata.actionDeliveryMode !== 'simulation' &&
+      metadata.actionDeliveryMode !== 'webhook') ||
     typeof metadata.version !== 'string' ||
     !/^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/.test(metadata.version) ||
     !Array.isArray(capabilities) ||
@@ -145,6 +149,7 @@ export function versionMetadataFinding(
           administrationCapability,
           approvalThresholdCapability,
           auditChainCapability,
+          webhookActionCapability,
         ]
       : []),
   ];

@@ -1,9 +1,10 @@
 # Control panel, invitations and signed actions
 
 This guide describes the implemented MVP. The panel uses real wallet proofs and
-persistent authorization state. Its deployment operation is a **simulation**: it
-inserts a receipt in SQLite and does not call a hosting service or execute a
-command.
+persistent authorization state. Its default deployment operation is a
+**simulation**; operators can explicitly configure signed private webhook
+delivery. The simulation inserts a receipt in SQLite and does not call a hosting
+service or execute a command.
 
 ## Start with an administrator
 
@@ -184,11 +185,15 @@ storage write fails, the effect and status change roll back and execution can be
 retried.
 
 This guarantees one recorded simulation per action in the current database
-history. It does not prevent creating a new action for the same payload, and it
-does not provide exactly-once delivery to an external system. Do not execute a
-real deployment merely because a browser supplies an approved-looking object. A
-future adapter must validate server-side authority and design durable delivery,
-idempotency and failure recovery for its actual external effect.
+history. It does not prevent creating a new action for the same payload.
+
+When the private server uses webhook mode, a newly requested action snapshots
+that mode and its approval message says the exact payload will be delivered.
+Execution creates a short opaque lease, sends the HMAC-authenticated request and
+uses the action ID as its idempotency key. Failed calls are auditable and can be
+retried up to five times. The receiver must durably deduplicate that key because
+the distributed guarantee is at least once. See
+[Signed action webhooks](16-ACTION-WEBHOOKS.md).
 
 The audit stream stores the application, event, actor identity, public session
 ID and time. The private panel can filter exact event types and page backwards
@@ -205,9 +210,10 @@ describe loaded records, not lifetime totals. The audit retention window is not
 an archival system; export records externally if policy requires longer
 retention. See [operational limits](08-OPERATIONS.md#current-limits).
 
-Restoration invalidates every invitation and pending approval. See
-[recovery](09-RECOVERY.md). Scoped agent delegation, passkeys, OIDC and real
-deployment adapters remain on the [roadmap](06-ROADMAP.md).
+Restoration invalidates every invitation and pending approval and marks a
+captured in-flight delivery failed. See [recovery](09-RECOVERY.md). Scoped agent
+delegation, passkeys, OIDC and provider-specific deployment adapters remain on
+the [roadmap](06-ROADMAP.md).
 
 ## Active sessions and automatic updates
 

@@ -34,6 +34,7 @@ deployment, require multiple approvers or provide cross-domain SSO.
 - [x] Operator-controlled application definitions and workspace switching.
 - [x] Configurable multi-person approval thresholds for sensitive actions.
 - [x] Hash-chained audit exports with offline digest verification.
+- [x] HMAC-signed action webhook with idempotency, leases and bounded retries.
 - [x] Independent QUIQUE.ES workspace integration with full HTTPS tests.
 - [x] Extract the QUIQUE.ES product source into its own local project while
       preserving the mandatory Gozne contract.
@@ -59,7 +60,8 @@ deployment, require multiple approvers or provide cross-domain SSO.
 Prioritize from actual integrations rather than adding every authentication
 feature:
 
-1. A real action adapter with delivery, idempotency and recovery guarantees.
+1. Provider-specific action adapters and reconciliation beyond the generic
+   signed webhook.
 2. Scoped and expiring delegation, including agent use cases.
 3. Wallet linking and replacement; WalletConnect and mobile support.
 4. Smart-wallet verification and optional passkey step-up.

@@ -6,6 +6,8 @@ import { AuthError, invalidProof } from '../auth/errors.js';
 import { SESSION_COOKIE, originAllowed, sameSiteRead } from '../auth/routes.js';
 import { verifyProof } from '../wallets/proofs.js';
 import type { ControlStore, DeploymentPayload } from './store.js';
+import type { Config } from '../config.js';
+import { deliverWebhook } from './delivery.js';
 
 const object = (properties: Record<string, unknown>) => ({
   type: 'object',
@@ -28,6 +30,7 @@ export async function controlRoutes(
   auth: AuthStore,
   store: ControlStore,
   now: () => number,
+  actionDelivery: Config['actionDelivery'],
 ) {
   app.addHook('preHandler', async (request) => {
     const session = auth.session(request.cookies[SESSION_COOKIE] ?? '', now());
@@ -167,9 +170,10 @@ export async function controlRoutes(
     async (request) =>
       store.saveUser(request.cookies[SESSION_COOKIE]!, request.body, now()),
   );
-  app.get('/v1/auth/control', async (request) =>
-    store.overview(request.cookies[SESSION_COOKIE]!, now()),
-  );
+  app.get('/v1/auth/control', async (request) => ({
+    ...store.overview(request.cookies[SESSION_COOKIE]!, now()),
+    actionDeliveryMode: actionDelivery.mode,
+  }));
   app.get<{
     Querystring: { before?: string; limit?: string; event?: string };
   }>(
@@ -279,7 +283,12 @@ export async function controlRoutes(
       },
     },
     async (request) =>
-      store.request(request.cookies[SESSION_COOKIE]!, request.body, now()),
+      store.request(
+        request.cookies[SESSION_COOKIE]!,
+        request.body,
+        actionDelivery.mode,
+        now(),
+      ),
   );
   app.post<{ Params: { id: string }; Body: { chainId: string } }>(
     '/v1/auth/control/actions/:id/challenge',
@@ -344,8 +353,45 @@ export async function controlRoutes(
   app.post<{ Params: { id: string } }>(
     '/v1/auth/control/actions/:id/execute',
     { schema: { params, body: empty } },
-    async (request) =>
-      store.execute(request.cookies[SESSION_COOKIE]!, request.params.id, now()),
+    async (request) => {
+      const raw = request.cookies[SESSION_COOKIE]!;
+      const mode = store.executionMode(raw, request.params.id, now());
+      if (mode === 'simulation')
+        return store.execute(raw, request.params.id, now());
+      if (actionDelivery.mode !== 'webhook')
+        throw new AuthError(
+          503,
+          'ACTION_ADAPTER_UNAVAILABLE',
+          'The action requires the configured webhook adapter',
+        );
+      const delivery = store.beginWebhook(raw, request.params.id, now());
+      try {
+        const result = await deliverWebhook(
+          actionDelivery,
+          delivery.action,
+          now(),
+        );
+        return store.finishWebhook(
+          request.params.id,
+          delivery.leaseToken,
+          result,
+          now(),
+        );
+      } catch (error) {
+        const code =
+          error instanceof Error && /^ACTION_[A-Z0-9_]+$/.test(error.message)
+            ? error.message
+            : error instanceof DOMException && error.name === 'TimeoutError'
+              ? 'ACTION_TIMEOUT'
+              : 'ACTION_NETWORK_ERROR';
+        store.failWebhook(request.params.id, delivery.leaseToken, code, now());
+        throw new AuthError(
+          502,
+          'ACTION_DELIVERY_FAILED',
+          'The application adapter did not accept the action',
+        );
+      }
+    },
   );
   app.post<{ Params: { id: string } }>(
     '/v1/auth/control/actions/:id/cancel',

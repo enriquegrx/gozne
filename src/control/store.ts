@@ -32,6 +32,7 @@ interface Action {
   approval_expires_at: number | null;
   executed_at: number | null;
   required_approvals: number;
+  delivery_mode: 'simulation' | 'webhook';
 }
 interface Approval {
   approver_identity: string;
@@ -161,6 +162,7 @@ export class ControlStore {
       approvals,
       approvalCount,
       requiredApprovals: action.required_approvals,
+      deliveryMode: action.delivery_mode,
       executedAt: action.executed_at,
     };
   }
@@ -218,7 +220,7 @@ export class ControlStore {
         : [],
       deployments: this.db
         .prepare(
-          'SELECT action_id AS actionId, project, version, environment, executed_at AS executedAt FROM demo_deployments WHERE application = ? ORDER BY executed_at DESC LIMIT 20',
+          'SELECT action_id AS actionId, project, version, environment, executed_at AS executedAt, delivery_mode AS deliveryMode, delivery_status AS deliveryStatus, response_digest AS responseDigest FROM demo_deployments WHERE application = ? ORDER BY executed_at DESC LIMIT 20',
         )
         .all(actor.application),
     };
@@ -666,7 +668,12 @@ export class ControlStore {
       return { ok: true };
     });
   }
-  request(raw: string, input: DeploymentPayload, now: number) {
+  request(
+    raw: string,
+    input: DeploymentPayload,
+    deliveryMode: 'simulation' | 'webhook',
+    now: number,
+  ) {
     return this.transaction(() => {
       const actor = this.actor(raw, now);
       const count = Number(
@@ -698,7 +705,7 @@ export class ControlStore {
           ?.approvalThreshold ?? 1;
       this.db
         .prepare(
-          "INSERT INTO actions(id, application, requester, requester_token_hash, payload, payload_hash, created_at, expires_at, status, required_approvals) VALUES (?,?,?,?,?,?,?,?,'pending',?)",
+          "INSERT INTO actions(id, application, requester, requester_token_hash, payload, payload_hash, created_at, expires_at, status, required_approvals, delivery_mode) VALUES (?,?,?,?,?,?,?,?,'pending',?,?)",
         )
         .run(
           id,
@@ -710,6 +717,7 @@ export class ControlStore {
           now,
           Math.min(now + 1800_000, actor.expiresAt),
           requiredApprovals,
+          deliveryMode,
         );
       this.audit(
         'action.requested',
@@ -779,7 +787,10 @@ export class ControlStore {
         chain,
         issuedAt: now,
         expiresAt: Math.min(now + 300_000, action.expires_at, actor.expiresAt),
-        statement: `Approve simulated deployment: ${payload.project} version ${payload.version} to ${payload.environment}. No infrastructure or funds will be changed.`,
+        statement:
+          action.delivery_mode === 'webhook'
+            ? `Approve action delivery: ${payload.project} version ${payload.version} to ${payload.environment}. Gozne will send this exact payload to the configured application adapter.`
+            : `Approve simulated deployment: ${payload.project} version ${payload.version} to ${payload.environment}. No infrastructure or funds will be changed.`,
         resources: [
           `urn:gozne:action:${action.id}`,
           `urn:gozne:sha256:${action.payload_hash}`,
@@ -896,9 +907,17 @@ export class ControlStore {
       )
         throw deny();
       const payload = JSON.parse(action.payload) as DeploymentPayload;
+      if (action.delivery_mode !== 'simulation')
+        throw new AuthError(
+          503,
+          'ACTION_ADAPTER_UNAVAILABLE',
+          'The action requires the configured webhook adapter',
+        );
       // The simulated effect and consumption share one SQLite commit. No external deployment runs here.
       this.db
-        .prepare('INSERT INTO demo_deployments VALUES (?,?,?,?,?,?)')
+        .prepare(
+          'INSERT INTO demo_deployments(action_id, application, project, version, environment, executed_at, delivery_mode) VALUES (?,?,?,?,?,?,?)',
+        )
         .run(
           id,
           actor.application,
@@ -906,6 +925,7 @@ export class ControlStore {
           payload.version,
           payload.environment,
           now,
+          'simulation',
         );
       this.db
         .prepare(
@@ -925,6 +945,184 @@ export class ControlStore {
       };
     });
   }
+
+  executionMode(raw: string, id: string, now: number) {
+    const actor = this.actor(raw, now);
+    const action = this.action(id, actor.application);
+    if (action.requester_token_hash !== digest(raw))
+      throw new AuthError(
+        403,
+        'REQUESTER_REQUIRED',
+        'Only the requesting session can execute this action',
+      );
+    return action.delivery_mode;
+  }
+
+  beginWebhook(raw: string, id: string, now: number) {
+    return this.transaction(() => {
+      const actor = this.actor(raw, now);
+      const action = this.action(id, actor.application);
+      this.requester(action, now);
+      if (action.requester_token_hash !== digest(raw))
+        throw new AuthError(
+          403,
+          'REQUESTER_REQUIRED',
+          'Only the requesting session can execute this action',
+        );
+      if (
+        action.delivery_mode !== 'webhook' ||
+        action.status !== 'approved' ||
+        this.approvals(action, now).filter((approval) => approval.valid)
+          .length < action.required_approvals
+      )
+        throw deny();
+      const existing = this.db
+        .prepare(
+          'SELECT state, attempts, lease_expires_at FROM action_deliveries WHERE action_id = ?',
+        )
+        .get(id) as
+        | {
+            state: 'delivering' | 'failed' | 'delivered';
+            attempts: number;
+            lease_expires_at: number;
+          }
+        | undefined;
+      if (existing?.state === 'delivered') throw deny();
+      if (existing?.state === 'delivering' && existing.lease_expires_at > now)
+        throw new AuthError(
+          409,
+          'ACTION_DELIVERY_BUSY',
+          'Action delivery is already in progress',
+        );
+      const attempts = (existing?.attempts ?? 0) + 1;
+      if (attempts > 5)
+        throw new AuthError(
+          409,
+          'ACTION_DELIVERY_LIMIT',
+          'Action delivery retry limit reached',
+        );
+      const leaseToken = randomBytes(32).toString('hex');
+      this.db
+        .prepare(
+          `INSERT INTO action_deliveries(action_id,state,attempts,lease_token_hash,session_id,lease_expires_at,last_attempt_at)
+           VALUES (?,'delivering',?,?,?,?,?)
+           ON CONFLICT(action_id) DO UPDATE SET state='delivering', attempts=excluded.attempts,
+             lease_token_hash=excluded.lease_token_hash, session_id=excluded.session_id,
+             lease_expires_at=excluded.lease_expires_at, last_attempt_at=excluded.last_attempt_at,
+             error_code=NULL`,
+        )
+        .run(id, attempts, digest(leaseToken), actor.id, now + 15_000, now);
+      const approvals = this.approvals(action, now)
+        .filter((approval) => approval.valid)
+        .map((approval) => approval.identity)
+        .sort();
+      return {
+        leaseToken,
+        action: {
+          format: 'gozne-action-v1' as const,
+          actionId: id,
+          application: action.application,
+          requester: action.requester,
+          payload: JSON.parse(action.payload) as DeploymentPayload,
+          payloadHash: action.payload_hash,
+          approvals,
+          requestedAt: action.created_at,
+          expiresAt: action.expires_at,
+        },
+      };
+    });
+  }
+
+  failWebhook(id: string, leaseToken: string, errorCode: string, now: number) {
+    return this.transaction(() => {
+      const action = this.db
+        .prepare('SELECT * FROM actions WHERE id=?')
+        .get(id) as unknown as Action | undefined;
+      const delivery = this.db
+        .prepare(
+          "SELECT session_id FROM action_deliveries WHERE action_id=? AND state='delivering' AND lease_token_hash=?",
+        )
+        .get(id, digest(leaseToken));
+      if (!action || !delivery) throw deny();
+      const result = this.db
+        .prepare(
+          "UPDATE action_deliveries SET state='failed', lease_expires_at=?, error_code=? WHERE action_id=? AND state='delivering' AND lease_token_hash=?",
+        )
+        .run(now, errorCode.slice(0, 64), id, digest(leaseToken));
+      if (result.changes)
+        this.audit(
+          'action.delivery-failed',
+          action.requester,
+          String(delivery.session_id),
+          action.application,
+          now,
+        );
+    });
+  }
+
+  finishWebhook(
+    id: string,
+    leaseToken: string,
+    result: { statusCode: number; responseDigest: string },
+    now: number,
+  ) {
+    return this.transaction(() => {
+      const delivery = this.db
+        .prepare(
+          'SELECT state, session_id FROM action_deliveries WHERE action_id=? AND lease_token_hash=?',
+        )
+        .get(id, digest(leaseToken));
+      if (!delivery || delivery.state !== 'delivering') throw deny();
+      const action = this.db
+        .prepare('SELECT * FROM actions WHERE id=?')
+        .get(id) as unknown as Action | undefined;
+      if (!action || action.status !== 'approved') throw deny();
+      const payload = JSON.parse(action.payload) as DeploymentPayload;
+      this.db
+        .prepare(
+          'INSERT INTO demo_deployments(action_id,application,project,version,environment,executed_at,delivery_mode,delivery_status,response_digest) VALUES (?,?,?,?,?,?,?,?,?)',
+        )
+        .run(
+          id,
+          action.application,
+          payload.project,
+          payload.version,
+          payload.environment,
+          now,
+          'webhook',
+          result.statusCode,
+          result.responseDigest,
+        );
+      this.db
+        .prepare(
+          "UPDATE action_deliveries SET state='delivered', lease_expires_at=?, delivered_at=?, status_code=?, response_digest=? WHERE action_id=?",
+        )
+        .run(now, now, result.statusCode, result.responseDigest, id);
+      this.db
+        .prepare(
+          "UPDATE actions SET status='executed', executed_at=? WHERE id=?",
+        )
+        .run(now, id);
+      this.audit(
+        'action.executed',
+        action.requester,
+        String(delivery.session_id),
+        action.application,
+        now,
+      );
+      return {
+        action: this.publicAction(this.action(id, action.application), now),
+        receipt: {
+          actionId: id,
+          ...payload,
+          executedAt: now,
+          simulated: false,
+          deliveryStatus: result.statusCode,
+          responseDigest: result.responseDigest,
+        },
+      };
+    });
+  }
   cancel(raw: string, id: string, now: number) {
     return this.transaction(() => {
       const actor = this.actor(raw, now);
@@ -940,6 +1138,18 @@ export class ControlStore {
         );
       if (action.status !== 'pending' && action.status !== 'approved')
         throw deny();
+      if (
+        this.db
+          .prepare(
+            "SELECT 1 FROM action_deliveries WHERE action_id=? AND state='delivering' AND lease_expires_at>?",
+          )
+          .get(id, now)
+      )
+        throw new AuthError(
+          409,
+          'ACTION_DELIVERY_BUSY',
+          'Action delivery is already in progress',
+        );
       this.db
         .prepare("UPDATE actions SET status = 'canceled' WHERE id = ?")
         .run(id);

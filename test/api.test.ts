@@ -28,7 +28,7 @@ test('health, version and unconfigured authentication expose the expected contra
   assert.notEqual(health.headers['x-request-id'], 'client-controlled');
   assert.deepEqual((await app.inject('/version')).json(), {
     name: 'gozne',
-    version: '0.1.0-dev.15',
+    version: '0.1.0-dev.16',
     stage: 'alpha',
     surface: 'public',
     authentication: true,
@@ -57,7 +57,7 @@ test('health, version and unconfigured authentication expose the expected contra
   );
 });
 
-test('admin version metadata advertises approval thresholds only on the private surface', async (t) => {
+test('admin version metadata advertises private capabilities and action mode', async (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'gozne-admin-version-'));
   const config = loadConfig({
     GOZNE_DATABASE: join(directory, 'gozne.sqlite'),
@@ -69,7 +69,9 @@ test('admin version metadata advertises approval thresholds only on the private 
     await app.close();
     rmSync(directory, { recursive: true, force: true });
   });
-  assert.deepEqual((await app.inject('/version')).json().capabilities, [
+  const metadata = (await app.inject('/version')).json();
+  assert.equal(metadata.actionDeliveryMode, 'simulation');
+  assert.deepEqual(metadata.capabilities, [
     'auth.evm.siwe.v1',
     'auth.solana.siws.v1',
     'forward-auth.session.v1',
@@ -77,6 +79,7 @@ test('admin version metadata advertises approval thresholds only on the private 
     'control.admin.v1',
     'control.approval-threshold.v1',
     'audit.export-chain.v1',
+    'action.delivery-webhook.v1',
   ]);
 });
 

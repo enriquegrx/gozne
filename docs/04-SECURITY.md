@@ -21,7 +21,9 @@ protection offered by wallet signatures.
 | Invitation bypass of disabled wallet | Static policy takes precedence over guest access                       |
 | Privilege escalation                 | Live server-side application roles; guests cannot grant admin          |
 | Reused or substituted approval       | Fresh nonce, exact payload hash, identity uniqueness and live sessions |
-| Double execution                     | Effect, consumption and audit in the same SQLite transaction           |
+| Double simulation                    | Effect, consumption and audit in the same SQLite transaction           |
+| Duplicate webhook delivery           | Stable idempotency key, short lease and bounded retries                |
+| Forged action webhook                | HMAC-SHA-256 over timestamp and exact request bytes                    |
 | Revoked requester or signer          | Both sessions rechecked before execution                               |
 | Failed persistence                   | Roll back and deny; no successful response before commit               |
 | API abuse                            | Per-IP rate limits, nonce limits and pending-action limits             |
@@ -30,11 +32,10 @@ protection offered by wallet signatures.
 
 ## Action-specific boundaries
 
-Action signatures approve a **simulation**, not an on-chain or hosting-provider
-transaction. Project, version and environment are immutable after creation. The
-statement displays these fields; resources bind an action UUID and SHA-256 of
-canonical JSON. Login and action messages are different and cannot be reused
-interchangeably.
+Action signatures approve the delivery mode captured at request time. Project,
+version and environment are immutable after creation. The statement displays
+these fields; resources bind an action UUID and SHA-256 of canonical JSON. Login
+and action messages are different and cannot be reused interchangeably.
 
 The approval challenge is bound to the administrator's current session. Invalid
 proofs consume a matched action nonce. Another session cannot consume it. The
@@ -48,8 +49,9 @@ person cannot satisfy a threshold. A normal restart preserves valid approvals,
 while policy changes and explicit restoration invalidate them.
 
 The owner may approve their own request. Applications that need separation of
-duties must set a threshold of two or more. There is no agent delegation or
-external execution capability in this alpha.
+duties must set a threshold of two or more. Webhook mode delivers approved data
+to an operator-configured endpoint; the receiver owns authorization of the
+actual effect. There is no agent delegation in this alpha.
 
 ## Administrative access
 
@@ -81,10 +83,11 @@ actions. It preserves the snapshot's policy, which must be reviewed before
 activation: a historical policy may authorize a subsequently disabled wallet.
 
 The exactly-once claim is limited to one simulation action in one SQLite
-history. It is not a guarantee for external services, arbitrary database
-tampering, restoring files outside the supported command, or creating a new
-action with the same payload. The host's filesystem and clock must behave
-correctly.
+history. Webhook delivery is at least once: a crash after the receiver commits
+can cause a retry with the same idempotency key. It is not a guarantee for
+external services, arbitrary database tampering, restoring files outside the
+supported command, or creating a new action with the same payload. The host's
+filesystem and clock must behave correctly.
 
 ## Runtime and release requirements
 

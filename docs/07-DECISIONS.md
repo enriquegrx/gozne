@@ -111,13 +111,14 @@ wallet ownership at login, so no secret invitation token needs storage or
 delivery. Acceptance means the first successful login, not a separate redemption
 action.
 
-## D-015 — Approvals and simulation share a database commit
+## D-015 — Simulation is atomic; webhook delivery is idempotent and leased
 
-The only adapter records a synthetic deployment receipt. Its effect and action
-consumption are committed together, making concurrent execution reject
-duplicates. An external deployment integration must provide its own
-idempotency/delivery model; do not describe this local guarantee as distributed
-exactly-once execution.
+Simulation records its receipt and consumes the action in one database commit.
+Webhook mode instead commits a short opaque delivery lease, signs the exact
+request with HMAC-SHA-256 and uses the action UUID as its stable idempotency
+key. Failures can be retried five times. The receiver must retain idempotency
+results: a crash between its commit and Gozne's receipt can repeat the request.
+This is at-least-once delivery, not distributed exactly-once execution.
 
 ## D-016 — Approval thresholds count identities
 

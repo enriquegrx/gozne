@@ -24,9 +24,9 @@ libraries or access to anyone's keys.
 
 > 🛠️ **Working alpha.** EVM and Solana authentication, wallet-bound invitations
 > a control panel and configurable multi-person approvals are implemented.
-> Signed deployment approvals run a **simulation**: they record an effect in
-> SQLite and never deploy infrastructure. There is no stable release or external
-> security audit yet.
+> Actions use a local **simulation by default**. An operator can instead enable
+> the private signed-webhook adapter for an application service. There is no
+> stable release or external security audit yet.
 
 ## A door for your tools 🔑
 
@@ -42,8 +42,9 @@ Gozne also lets you try a more deliberate workflow:
    environment.
 3. **Review and sign it.** The configured number of distinct administrators sign
    that exact request, with an action ID, payload hash and short expiry.
-4. **Execute it once.** The requesting session records the simulated deployment.
-   A second execution is rejected.
+4. **Execute it once.** The requesting session records the simulation or sends
+   the exact action to a configured private webhook. A second execution is
+   rejected; webhook retries reuse the action ID.
 
 The owner and collaborator use separate browser profiles. The default approval
 threshold is one, so an owner can run a quick single-wallet test. Raise it per
@@ -59,7 +60,8 @@ application when an operation must be reviewed by more than one person.
 - ⏱️ **Temporary invitations:** reader access for a specific wallet, expiry and
   immediate revocation, without rewriting the main policy.
 - ✍️ **Signed intent:** exact deployment parameters, fresh proofs from one or
-  more distinct administrators and one-time execution of a local simulation.
+  more distinct administrators, a local simulation and optional HMAC-signed
+  webhook delivery with idempotent retries.
 - 🧭 **Multiple applications:** operator-controlled application creation and
   configuration, with separate workspace sign-in. See the
   [application guide](docs/13-APPLICATIONS.md).
@@ -152,6 +154,7 @@ flowchart LR
     W --> N[Nginx]
     N -->|Check live session| G
     N -->|Verified identity + roles| A[Your application]
+    G -->|Optional signed action webhook| A
 ```
 
 Authentication protects application access. Signed actions are a separate API
@@ -180,13 +183,17 @@ npm run cli -- doctor --json
 
 Configuration validation is read-only. `doctor` expects an initialized database.
 
-| Variable          | Local default          | Purpose                                              |
-| ----------------- | ---------------------- | ---------------------------------------------------- |
-| `GOZNE_SURFACE`   | `public`               | `public` authentication or `admin` internal controls |
-| `GOZNE_HOST`      | `127.0.0.1`            | Listen address                                       |
-| `GOZNE_PORT`      | `3001`                 | HTTP port                                            |
-| `GOZNE_DATABASE`  | `./state/gozne.sqlite` | SQLite file                                          |
-| `GOZNE_LOG_LEVEL` | `info`                 | `silent`, `info`, `warn` or `error`                  |
+| Variable                          | Local default          | Purpose                                              |
+| --------------------------------- | ---------------------- | ---------------------------------------------------- |
+| `GOZNE_SURFACE`                   | `public`               | `public` authentication or `admin` internal controls |
+| `GOZNE_HOST`                      | `127.0.0.1`            | Listen address                                       |
+| `GOZNE_PORT`                      | `3001`                 | HTTP port                                            |
+| `GOZNE_DATABASE`                  | `./state/gozne.sqlite` | SQLite file                                          |
+| `GOZNE_LOG_LEVEL`                 | `info`                 | `silent`, `info`, `warn` or `error`                  |
+| `GOZNE_ACTION_MODE`               | `simulation`           | `simulation` or private `webhook` delivery           |
+| `GOZNE_ACTION_WEBHOOK_URL`        | —                      | HTTPS receiver URL                                   |
+| `GOZNE_ACTION_WEBHOOK_SECRET`     | —                      | Shared secret of at least 32 bytes                   |
+| `GOZNE_ACTION_WEBHOOK_TIMEOUT_MS` | `5000`                 | Receiver timeout, from 500 to 10,000 ms              |
 
 The container listens on `0.0.0.0` and stores state in `/app/state`. No session
 signing secret is needed. Node reads environment variables; it does not load
@@ -199,6 +206,7 @@ imported. Keep `/v1/auth/validate` internal to the proxy.
   [Architecture](docs/02-ARCHITECTURE.md)
 - [API guide](docs/03-API-AND-CONTRACTS.md) · [OpenAPI contract](openapi.yaml)
 - [Control panel and signed actions](docs/11-CONTROL-PANEL.md)
+- [Signed action webhooks](docs/16-ACTION-WEBHOOKS.md)
 - [Threat model](docs/04-SECURITY.md) · [Recovery](docs/09-RECOVERY.md)
 - [Verification and reports](docs/10-VERIFICATION.md) ·
   [Roadmap](docs/06-ROADMAP.md)

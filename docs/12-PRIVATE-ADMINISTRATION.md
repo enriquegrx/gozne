@@ -1,7 +1,9 @@
 # Private administration
 
 Gozne separates public wallet sign-in from the workspace that manages users,
-wallets, roles, invitations, sessions and signed simulation actions.
+wallets, roles, invitations, sessions and signed actions. Action execution uses
+the local simulation unless the private API is explicitly configured with the
+signed webhook adapter.
 
 ## Deployed layout
 

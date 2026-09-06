@@ -24,7 +24,7 @@ test('schema survives restart and database is owner-only', (t) => {
   const second = openStorage(path);
   second.check();
   second.close();
-  assert.equal(inspectStorage(path).schemaVersion, 5);
+  assert.equal(inspectStorage(path).schemaVersion, 6);
 });
 
 test('failed migration rolls back its DDL and migration record', () => {
@@ -36,8 +36,8 @@ test('failed migration rolls back its DDL and migration record', () => {
       migrate(db, [
         ...initial,
         {
-          version: 6,
-          name: '006-broken.sql',
+          version: 7,
+          name: '007-broken.sql',
           sql: 'CREATE TABLE partial (id INTEGER); INSERT INTO missing VALUES (1);',
         },
       ]),
@@ -49,7 +49,7 @@ test('failed migration rolls back its DDL and migration record', () => {
     assert.equal(
       db.prepare('SELECT COUNT(*) AS total FROM schema_migrations').get()
         ?.total,
-      5,
+      6,
     );
     assert.equal(db.isTransaction, false);
   } finally {
@@ -72,8 +72,8 @@ test('changed and newer migration histories are rejected', () => {
       ),
     );
     db.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?, ?)').run(
-      6,
-      '006-future.sql',
+      7,
+      '007-future.sql',
       'synthetic-checksum',
       'test',
     );
@@ -104,7 +104,7 @@ test('audit migration backfills application from an existing session', () => {
     db.prepare(
       'INSERT INTO audit(at, event, identity, session_id) VALUES (?, ?, ?, ?)',
     ).run(1, 'login.succeeded', 'owner', 'session-id');
-    assert.equal(migrate(db, migrations), 5);
+    assert.equal(migrate(db, migrations), 6);
     assert.equal(
       db.prepare('SELECT application FROM audit').get()?.application,
       'demo',
@@ -140,7 +140,7 @@ test('multi-approval migration preserves an existing approval', () => {
       2,
       9,
     );
-    assert.equal(migrate(db, migrations), 5);
+    assert.equal(migrate(db, migrations), 6);
     assert.equal(
       db.prepare('SELECT required_approvals FROM actions').get()
         ?.required_approvals,
@@ -160,6 +160,60 @@ test('multi-approval migration preserves an existing approval', () => {
         approver_token_hash: 'approver-hash',
         approved_at: 2,
         expires_at: 9,
+      },
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test('action delivery migration preserves simulations and initializes delivery state', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const migrations = loadMigrations();
+    migrate(db, migrations.slice(0, 5));
+    db.prepare(
+      `INSERT INTO actions(
+        id, application, requester, requester_token_hash, payload, payload_hash,
+        created_at, expires_at, status, required_approvals
+      ) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    ).run(
+      'action-id',
+      'demo',
+      'owner',
+      'requester-hash',
+      '{"project":"site","version":"v1","environment":"staging"}',
+      'payload-hash',
+      1,
+      10,
+      'executed',
+      1,
+    );
+    db.prepare('INSERT INTO demo_deployments VALUES (?,?,?,?,?,?)').run(
+      'action-id',
+      'demo',
+      'site',
+      'v1',
+      'staging',
+      2,
+    );
+    assert.equal(migrate(db, migrations), 6);
+    assert.equal(
+      db.prepare('SELECT delivery_mode FROM actions').get()?.delivery_mode,
+      'simulation',
+    );
+    assert.deepEqual(
+      {
+        ...db
+          .prepare(
+            'SELECT delivery_mode, delivery_status, response_digest FROM demo_deployments',
+          )
+          .get(),
+      },
+      {
+        delivery_mode: 'simulation',
+        delivery_status: null,
+        response_digest: null,
       },
     );
   } finally {

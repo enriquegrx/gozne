@@ -5,6 +5,7 @@ import {
   administrationCapability,
   approvalThresholdCapability,
   auditChainCapability,
+  webhookActionCapability,
   authenticationCapabilities,
   version,
 } from '../metadata.js';
@@ -109,6 +110,9 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
     stage: 'alpha',
     surface: config.surface,
     authentication: true,
+    ...(config.surface === 'admin'
+      ? { actionDeliveryMode: config.actionDelivery.mode }
+      : {}),
     capabilities:
       config.surface === 'admin'
         ? [
@@ -116,6 +120,7 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
             administrationCapability,
             approvalThresholdCapability,
             auditChainCapability,
+            webhookActionCapability,
           ]
         : authenticationCapabilities,
   }));
@@ -123,7 +128,13 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
     await authRoutes(scope, storage.auth, now, config.surface);
     if (config.surface === 'admin')
       await scope.register(async (control) =>
-        controlRoutes(control, storage.auth, storage.control, now),
+        controlRoutes(
+          control,
+          storage.auth,
+          storage.control,
+          now,
+          config.actionDelivery,
+        ),
       );
   });
   app.addHook('onClose', async () => {

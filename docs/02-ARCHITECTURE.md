@@ -17,6 +17,7 @@ flowchart LR
     I[Local or VPN browser] --> D[Private panel + HTTPS proxy]
     D --> C[Private control API]
     C --> S
+    C -->|Optional HMAC-signed action| R[Private application receiver]
     O[Local CLI] --> S
 ```
 
@@ -28,7 +29,7 @@ flowchart LR
 | `src/auth`       | Login challenges, sessions, CSRF, live authorization      |
 | `src/wallets`    | Canonical addresses and exact SIWE/SIWS messages          |
 | `src/policy`     | Strict declarative JSON policy validation                 |
-| `src/control`    | Invitations, approval proofs and simulated effects        |
+| `src/control`    | Invitations, approval proofs and action delivery          |
 | `src/storage`    | Migrations, integrity checks, backup and restore          |
 | `cli`            | Local operator commands                                   |
 | `examples/login` | Static browser panel and wallet discovery                 |
@@ -42,7 +43,8 @@ sessions and audit. Schema 3 adds invitations, actions, action challenges and
 simulated deployments. Schema 4 scopes audit records to an application so
 administrators can inspect them safely in the private panel. Schema 5 records
 distinct approval identities and snapshots the required threshold on each
-action. Existing migration files are immutable.
+action. Schema 6 snapshots its delivery mode and adds leased, retryable webhook
+delivery receipts. Existing migration files are immutable.
 
 Login consumes its challenge and creates its session in one transaction. An
 approval is revalidated after asynchronous signature verification. Execution
@@ -50,9 +52,11 @@ checks the requesting session and every required administrator approval, then
 commits the simulated effect, consumed action and audit event in one SQLite
 transaction. A write failure rolls everything back.
 
-This atomicity does not extend to an external API, shell command or deployment
-provider. Such adapters need idempotency, an outbox or equivalent delivery
-design.
+Webhook delivery crosses the SQLite transaction boundary. Gozne commits a short
+opaque lease before sending, uses the action UUID as an idempotency key, then
+records success or a bounded retry. A receiver can process the request before
+Gozne records its response, so the receiver must persist that key and return the
+original result for duplicates.
 
 ## Policy and access
 

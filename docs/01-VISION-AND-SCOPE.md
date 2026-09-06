@@ -14,8 +14,9 @@ HTTP application through a defined reverse-proxy boundary. The protected app
 needs no private keys or blockchain libraries.
 
 The control panel extends this foundation with temporary wallet access and
-approvals bound to a specific action. Its first action adapter is deliberately a
-**local deployment simulation**. It demonstrates the permission workflow, not a
+approvals bound to a specific action. Delivery has two deliberate modes: a
+**local deployment simulation** and an optional signed private webhook. They
+demonstrate the permission workflow; the receiving service still owns the
 connection to a hosting provider.
 
 ## Intended users
@@ -46,8 +47,8 @@ global high availability or immediate support for all smart wallets.
 - Explicit identities, wallets and roles per application.
 - Persistent opaque sessions and local administrative CLI.
 - Nginx `auth_request` example and a header contract for integration.
-- Browser control panel, reader invitations, signed simulated deployment
-  actions.
+- Browser control panel, reader invitations, signed action simulation and
+  optional HMAC-authenticated webhook delivery actions.
 - Non-root OCI containers, transactional SQLite migrations and verified backups.
 - OpenAPI, automated tests, image scanning and CycloneDX inventories.
 

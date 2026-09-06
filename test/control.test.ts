@@ -6,6 +6,8 @@ import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import type { TestContext } from 'node:test';
 import { Wallet } from 'ethers';
+import { createHmac } from 'node:crypto';
+import { createServer } from 'node:http';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { base58 } from '@scure/base';
 import { buildApp } from '../src/api/app.js';
@@ -14,7 +16,11 @@ import { openStorage } from '../src/storage/database.js';
 import { backupDatabase, restoreDatabase } from '../src/storage/recovery.js';
 
 const origin = 'https://control.example.test';
-function fixture(t: TestContext, approvalThreshold = 1) {
+function fixture(
+  t: TestContext,
+  approvalThreshold = 1,
+  actionEnv: NodeJS.ProcessEnv = {},
+) {
   const directory = mkdtempSync(join(tmpdir(), 'gozne-control-'));
   const path = join(directory, 'gozne.sqlite');
   const owner = Wallet.createRandom();
@@ -71,6 +77,7 @@ function fixture(t: TestContext, approvalThreshold = 1) {
       GOZNE_DATABASE: path,
       GOZNE_LOG_LEVEL: 'silent',
       GOZNE_SURFACE: 'admin',
+      ...actionEnv,
     }),
     storage,
     () => now,
@@ -364,6 +371,128 @@ test('wallet-bound invitation, signed exact action and concurrent one-time execu
   const overview = f.storage.control.overview(owner.raw, Date.now());
   assert.equal(overview.deployments.length, 1);
   assert.equal(overview.actions[0]?.status, 'executed');
+});
+
+test('webhook delivery is signed, idempotent and safely retryable', async (t) => {
+  const secret = 'test-webhook-secret.'.repeat(2);
+  const deliveries: Array<{
+    body: string;
+    headers: Record<string, string | string[] | undefined>;
+  }> = [];
+  const receiver = createServer((request, response) => {
+    const chunks: Buffer[] = [];
+    request.on('data', (chunk: Buffer) => chunks.push(chunk));
+    request.on('end', () => {
+      deliveries.push({
+        body: Buffer.concat(chunks).toString('utf8'),
+        headers: request.headers,
+      });
+      if (deliveries.length === 3) {
+        response.writeHead(200, { 'content-type': 'application/octet-stream' });
+        response.end(Buffer.alloc(64 * 1024 + 1));
+        return;
+      }
+      response.writeHead(deliveries.length === 1 ? 503 : 202, {
+        'content-type': 'text/plain',
+      });
+      response.end(deliveries.length === 1 ? 'retry' : 'accepted');
+    });
+  });
+  await new Promise<void>((resolve) =>
+    receiver.listen(0, '127.0.0.1', resolve),
+  );
+  t.after(
+    () => new Promise<void>((resolve) => receiver.close(() => resolve())),
+  );
+  const address = receiver.address();
+  assert.ok(address && typeof address === 'object');
+  const f = fixture(t, 1, {
+    GOZNE_ACTION_MODE: 'webhook',
+    GOZNE_ACTION_WEBHOOK_URL: `http://127.0.0.1:${address.port}/actions`,
+    GOZNE_ACTION_WEBHOOK_SECRET: secret,
+    GOZNE_ACTION_WEBHOOK_ALLOW_HTTP: 'true',
+  });
+  const owner = await f.login();
+  const action = await f.request(owner);
+  await f.approve(owner, action.id);
+
+  const first = await f.post(owner, `actions/${action.id}/execute`);
+  assert.equal(first.statusCode, 502, first.body);
+  assert.equal(first.json().error.code, 'ACTION_DELIVERY_FAILED');
+  const second = await f.post(owner, `actions/${action.id}/execute`);
+  assert.equal(second.statusCode, 200, second.body);
+  const receipt = second.json<{
+    receipt: {
+      simulated: boolean;
+      deliveryStatus: number;
+      responseDigest: string;
+    };
+  }>().receipt;
+  assert.equal(receipt.simulated, false);
+  assert.equal(receipt.deliveryStatus, 202);
+  assert.match(receipt.responseDigest, /^[a-f0-9]{64}$/);
+
+  assert.equal(deliveries.length, 2);
+  assert.equal(deliveries[0]!.body, deliveries[1]!.body);
+  assert.equal(deliveries[0]!.headers['idempotency-key'], action.id);
+  const timestamp = String(deliveries[0]!.headers['x-gozne-timestamp']);
+  const expected = createHmac('sha256', secret)
+    .update(`${timestamp}.${deliveries[0]!.body}`)
+    .digest('hex');
+  assert.equal(
+    deliveries[0]!.headers['x-gozne-signature'],
+    `sha256=${expected}`,
+  );
+  const delivered = f.storage.control.overview(owner.raw, Date.now());
+  assert.equal(delivered.actions[0]?.deliveryMode, 'webhook');
+  assert.equal(delivered.deployments[0]?.deliveryMode, 'webhook');
+  assert.equal(
+    f.storage.control.auditTrail(
+      owner.raw,
+      { event: 'action.delivery-failed' },
+      Date.now(),
+    ).events.length,
+    1,
+  );
+
+  const oversized = await f.request(owner);
+  await f.approve(owner, oversized.id);
+  const rejected = await f.post(owner, `actions/${oversized.id}/execute`);
+  assert.equal(rejected.statusCode, 502, rejected.body);
+  assert.equal(rejected.json().error.code, 'ACTION_DELIVERY_FAILED');
+});
+
+test('a leased webhook result survives session revocation without becoming cancelable', async (t) => {
+  const f = fixture(t, 1, {
+    GOZNE_ACTION_MODE: 'webhook',
+    GOZNE_ACTION_WEBHOOK_URL: 'https://adapter.example.test/actions',
+    GOZNE_ACTION_WEBHOOK_SECRET: 'test-webhook-secret.'.repeat(2),
+  });
+  const owner = await f.login();
+  const action = await f.request(owner);
+  await f.approve(owner, action.id);
+  const delivery = f.storage.control.beginWebhook(
+    owner.raw,
+    action.id,
+    Date.now(),
+  );
+  assert.equal(
+    (await f.post(owner, `actions/${action.id}/cancel`)).statusCode,
+    409,
+  );
+  const policy = structuredClone(f.storage.auth.policy()!.policy);
+  policy.applications[0]!.approvalThreshold = 2;
+  f.storage.auth.applyPolicy(policy);
+  assert.equal(f.storage.auth.session(owner.raw, Date.now()), null);
+
+  const result = f.storage.control.finishWebhook(
+    action.id,
+    delivery.leaseToken,
+    { statusCode: 202, responseDigest: 'a'.repeat(64) },
+    Date.now(),
+  );
+  assert.equal(result.action.status, 'executed');
+  assert.equal(result.receipt.simulated, false);
 });
 
 test('guests cannot invite or approve; CSRF, foreign origins and cross-application IDs are rejected', async (t) => {

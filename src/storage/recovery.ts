@@ -76,7 +76,7 @@ async function snapshot(source: string, destination: string, restore: boolean) {
         try {
           // Old cookies must not become valid again after restoring a pre-revocation snapshot.
           copy.exec(
-            "DELETE FROM sessions; DELETE FROM nonces; DELETE FROM action_challenges; UPDATE actions SET status = 'canceled' WHERE status IN ('pending','approved'); UPDATE invitations SET revoked_at = COALESCE(revoked_at, 0);",
+            "DELETE FROM sessions; DELETE FROM nonces; DELETE FROM action_challenges; UPDATE actions SET status = 'canceled' WHERE status IN ('pending','approved'); UPDATE action_deliveries SET state='failed', error_code='DATABASE_RESTORED' WHERE state='delivering'; UPDATE invitations SET revoked_at = COALESCE(revoked_at, 0);",
           );
           copy
             .prepare('INSERT INTO audit(at, event) VALUES (?, ?)')

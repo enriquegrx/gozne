@@ -127,6 +127,7 @@
     preview: 'vista previa',
     production: 'producción',
     '＋ Request simulated deployment': '＋ Solicitar despliegue simulado',
+    '＋ Request action': '＋ Solicitar acción',
     'Sign in to see requests and create your first action.':
       'Inicia sesión para ver las peticiones y crear tu primera acción.',
     'Temporary invitations': 'Invitaciones temporales',
@@ -188,6 +189,8 @@
     'Deployment receipts': 'Recibos de despliegue',
     'Simulated effects committed with their approvals.':
       'Efectos simulados registrados junto a sus aprobaciones.',
+    'Simulation and signed webhook results.':
+      'Resultados de simulación y webhooks firmados.',
     'No receipts loaded.': 'No hay recibos cargados.',
     'Recent security events for this application.':
       'Eventos de seguridad recientes de esta aplicación.',
@@ -217,6 +220,8 @@
       'El inicio de sesión demuestra la propiedad de la wallet. La firma de una acción aprueba el proyecto, la versión y el entorno indicados.',
     'This demo records simulated deployments. It never runs a deployment or moves funds.':
       'Esta demo registra despliegues simulados. Nunca ejecuta un despliegue ni mueve fondos.',
+    'Actions use the local simulation unless the operator configures a signed private webhook. Gozne never moves funds.':
+      'Las acciones usan la simulación local salvo que el operador configure un webhook privado firmado. Gozne nunca mueve fondos.',
     'First time here?': '¿Es tu primera vez?',
     'The operator must attach their public wallet address to an administrator identity. Invited collaborators only need their own wallet.':
       'El operador debe asociar su dirección pública a una identidad administradora. Los colaboradores invitados solo necesitan su propia wallet.',
@@ -249,6 +254,8 @@
       'Selecciona una wallet EVM detectada en el panel de wallet.',
     'No requests yet. Create a simulated deployment above.':
       'Todavía no hay peticiones. Crea arriba un despliegue simulado.',
+    'No requests yet. Create an action above.':
+      'Todavía no hay peticiones. Crea una acción arriba.',
     'View signed identifiers': 'Ver identificadores firmados',
     'Requested by {requester} · Expires {expires}':
       'Solicitado por {requester} · Caduca {expires}',
@@ -260,6 +267,7 @@
       '{approver} · firmó {signed} · caduca {expires}',
     'Sign approval': 'Firmar aprobación',
     'Execute simulation once': 'Ejecutar simulación una vez',
+    'Deliver approved action': 'Entregar acción aprobada',
     'Cancel request': 'Cancelar petición',
     'Your invitation grants reader access. Administration is reserved for operators.':
       'Tu invitación concede acceso de lectura. La administración está reservada a los operadores.',
@@ -273,7 +281,14 @@
     'Revoke access': 'Revocar acceso',
     'Executed simulations will appear here. No infrastructure is changed.':
       'Las simulaciones ejecutadas aparecerán aquí. No se modifica infraestructura.',
+    'Executed action receipts will appear here.':
+      'Los recibos de acciones ejecutadas aparecerán aquí.',
     '{environment} · Simulated · {date}': '{environment} · Simulado · {date}',
+    '{environment} · {mode} · {date}': '{environment} · {mode} · {date}',
+    'Signed webhook': 'Webhook firmado',
+    Simulated: 'Simulado',
+    'Receiver status {status} · Response SHA-256 {digest}':
+      'Estado del receptor {status} · SHA-256 de respuesta {digest}',
     'Public address': 'Dirección pública',
     Enabled: 'Activa',
     Remove: 'Eliminar',
@@ -303,6 +318,8 @@
       'No fue necesario cambiar la política. Tu sesión sigue activa.',
     'Request created. An administrator can now sign the exact deployment.':
       'Petición creada. Un administrador ya puede firmar el despliegue exacto.',
+    'Request created. An administrator can now sign the exact action.':
+      'Petición creada. Un administrador ya puede firmar la acción exacta.',
     'Invite created for {address} until {expires}. Share this address: ':
       'Invitación creada para {address} hasta {expires}. Comparte esta dirección: ',
     'Invitation created. Only that wallet can use it; the link carries no access token.':
@@ -322,6 +339,7 @@
     'action.proof-denied': 'Firma de acción denegada',
     'action.approved': 'Acción aprobada',
     'action.executed': 'Acción ejecutada',
+    'action.delivery-failed': 'Entrega de acción fallida',
     'action.canceled': 'Acción cancelada',
     'Application manager access. Select an application to edit its configuration.':
       'Acceso de gestor de aplicaciones. Selecciona una aplicación para editarla.',

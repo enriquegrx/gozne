@@ -120,9 +120,12 @@ export class AuthStore {
       this.db
         .prepare('UPDATE sessions SET revoked_at = ? WHERE revoked_at IS NULL')
         .run(now);
-      this.db.exec(
-        "DELETE FROM nonces; DELETE FROM action_challenges; UPDATE actions SET status = 'canceled' WHERE status IN ('pending', 'approved');",
-      );
+      this.db.exec('DELETE FROM nonces; DELETE FROM action_challenges;');
+      this.db
+        .prepare(
+          "UPDATE actions SET status = 'canceled' WHERE status IN ('pending', 'approved') AND NOT EXISTS (SELECT 1 FROM action_deliveries WHERE action_id=actions.id AND state='delivering' AND lease_expires_at>?)",
+        )
+        .run(now);
       this.db
         .prepare(
           'UPDATE invitations SET revoked_at = ? WHERE revoked_at IS NULL',

@@ -122,6 +122,22 @@ the instance. The database keeps at most 50,000 audit rows and removes rows
 older than 30 days as new events are written; export to an external archive when
 longer retention is required.
 
+## Signed action delivery
+
+The private API uses the local simulation unless `GOZNE_ACTION_MODE=webhook` is
+configured with an HTTPS URL and a secret of at least 32 bytes. Webhook
+configuration belongs only on `admin-api`; putting it on the public process is
+rejected. The active private mode appears in `/version`, while the URL and
+secret never do.
+
+The call has a five-second default timeout, a 10-second maximum and no redirect
+following. Non-`2xx` responses, network errors and responses over 64 KiB fail
+closed. The original requester can retry up to five times while the signed
+authority remains valid. Monitor `action.delivery-failed` audit events and
+reconcile repeated action IDs at the receiver. Full configuration, signature
+verification and recovery rules are in
+[Signed action webhooks](16-ACTION-WEBHOOKS.md).
+
 ## Proxy integration
 
 Login, API and application share an HTTPS origin. Cookies are host-only; this
@@ -169,6 +185,11 @@ requesting identity and application; 1,000 action challenges. Audit is capped at
 50,000 events and 30 days. Expired login nonces/sessions are pruned when new
 challenges are issued. Action challenges are pruned when new action challenges
 are issued.
+
+Webhook actions allow at most five delivery attempts. Each live delivery lease
+lasts 15 seconds and the configured network timeout cannot exceed 10 seconds.
+The receiver must retain idempotency results for longer than Gozne action and
+recovery history require; Gozne cannot impose that retention remotely.
 
 Action, invitation and receipt history is retained in SQLite without automatic
 archival. Monitor volume growth. The overview returns at most 100 recent

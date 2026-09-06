@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.15
+  version: 0.1.0-dev.16
   description:
-    Alpha EVM/SIWS authentication and signed simulation controls. API and login
+    Alpha EVM/SIWS authentication and signed action controls. API and login
     require the same HTTPS origin within each surface. Control paths exist only
     on the private admin surface (GOZNE_SURFACE=admin), never the public
     listener. Authentication returns 503 without a policy.
@@ -68,6 +68,13 @@ paths:
                         - forward-auth.session.v1
                         - forward-auth.request.v1
                         - control.admin.v1
+                        - control.approval-threshold.v1
+                        - audit.export-chain.v1
+                        - action.delivery-webhook.v1
+                  actionDeliveryMode:
+                    type: string
+                    enum: [simulation, webhook]
+                    description: Present only on the private admin surface
                 required:
                   - name
                   - version
@@ -545,7 +552,7 @@ paths:
       description:
         Up to 100 recent actions. Readers see actions from their current session
         only. Administrators also receive up to 100 invitations and active
-        sessions. All authorized users receive up to 20 simulated deployment
+        sessions. All authorized users receive up to 20 action execution
         receipts. Counters should not be treated as lifetime totals.
       security:
         - SessionCookie: []
@@ -859,7 +866,7 @@ paths:
             format: uuid
   /v1/auth/control/actions:
     post:
-      summary: Request a simulated deployment
+      summary: Request an action using the configured delivery mode
       description:
         Any authorized session. Payload is immutable. Expires after at most 30
         minutes, bounded by the requesting session. Only the original session
@@ -1114,11 +1121,12 @@ paths:
           schema: *id003
   /v1/auth/control/actions/{id}/execute:
     post:
-      summary: Commit a simulated deployment exactly once per action
+      summary: Execute a simulated or webhook action
       description:
         Original requesting session only. Both requester and administrator
-        sessions must still authorize. Effect, consumption and audit share one
-        SQLite transaction. No external deployment runs. A repeat returns 409.
+        sessions must authorize when delivery starts. Simulation is committed in
+        one SQLite transaction. Webhook mode uses a short lease, HMAC signature
+        and stable idempotency key. A repeat after success returns 409.
       security:
         - SessionCookie: []
       responses:
@@ -1173,6 +1181,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '503':
           description: Policy or storage unavailable; deny access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Configured action receiver did not accept the delivery
           content:
             application/json:
               schema:
@@ -1900,6 +1914,9 @@ components:
           maxItems: 1000
           items:
             $ref: '#/components/schemas/ActionApproval'
+        deliveryMode:
+          type: string
+          enum: [simulation, webhook]
         executedAt:
           type:
             - integer
@@ -1919,6 +1936,7 @@ components:
         - requiredApprovals
         - approvalCount
         - approvals
+        - deliveryMode
         - executedAt
     ActionApproval:
       type: object
@@ -2020,12 +2038,23 @@ components:
             - production
         executedAt: &id007
           type: integer
+        deliveryMode:
+          type: string
+          enum: [simulation, webhook]
+        deliveryStatus:
+          type: [integer, 'null']
+        responseDigest:
+          type: [string, 'null']
+          pattern: ^[a-f0-9]{64}$
       required:
         - actionId
         - project
         - version
         - environment
         - executedAt
+        - deliveryMode
+        - deliveryStatus
+        - responseDigest
     ExecutionReceipt:
       type: object
       additionalProperties: false
@@ -2037,7 +2066,11 @@ components:
         executedAt: *id007
         simulated:
           type: boolean
-          const: true
+        deliveryStatus:
+          type: integer
+        responseDigest:
+          type: string
+          pattern: ^[a-f0-9]{64}$
       required:
         - actionId
         - project
@@ -2101,11 +2134,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Deployment'
+        actionDeliveryMode:
+          type: string
+          enum: [simulation, webhook]
       required:
         - actions
         - invitations
         - sessions
         - deployments
+        - actionDeliveryMode
     AuditEvent:
       type: object
       additionalProperties: false
@@ -2234,6 +2271,9 @@ components:
           maxItems: 1000
           items:
             $ref: '#/components/schemas/ActionApproval'
+        deliveryMode:
+          type: string
+          enum: [simulation, webhook]
         executedAt:
           type:
             - integer
@@ -2267,6 +2307,7 @@ components:
         - requiredApprovals
         - approvalCount
         - approvals
+        - deliveryMode
         - executedAt
         - permissions
     UserWallet:
