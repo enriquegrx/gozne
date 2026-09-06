@@ -12,3 +12,12 @@ if (
   throw new Error('Invalid package metadata');
 }
 export const version = manifest.version;
+
+export const authenticationCapabilities = [
+  'auth.evm.siwe.v1',
+  'auth.solana.siws.v1',
+  'forward-auth.session.v1',
+  'forward-auth.request.v1',
+] as const;
+
+export const administrationCapability = 'control.admin.v1' as const;

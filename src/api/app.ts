@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import Fastify, { LogController } from 'fastify';
 import type { Config } from '../config.js';
-import { version } from '../metadata.js';
+import {
+  administrationCapability,
+  authenticationCapabilities,
+  version,
+} from '../metadata.js';
 import type { Storage } from '../storage/database.js';
 import { AuthError } from '../auth/errors.js';
 import { controlRoutes } from '../control/routes.js';
@@ -101,7 +105,12 @@ export function buildApp(config: Config, storage: Storage, now = Date.now) {
     name: 'gozne',
     version,
     stage: 'alpha',
+    surface: config.surface,
     authentication: true,
+    capabilities:
+      config.surface === 'admin'
+        ? [...authenticationCapabilities, administrationCapability]
+        : authenticationCapabilities,
   }));
   void app.register(async (scope) => {
     await authRoutes(scope, storage.auth, now, config.surface);

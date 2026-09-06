@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gozne
-  version: 0.1.0-dev.10
+  version: 0.1.0-dev.11
   description:
     Alpha EVM/SIWS authentication and signed simulation controls. API and login
     require the same HTTPS origin within each surface. Control paths exist only
@@ -54,11 +54,27 @@ paths:
                   authentication:
                     type: boolean
                     const: true
+                  surface:
+                    type: string
+                    enum: [public, admin]
+                  capabilities:
+                    type: array
+                    uniqueItems: true
+                    items:
+                      type: string
+                      enum:
+                        - auth.evm.siwe.v1
+                        - auth.solana.siws.v1
+                        - forward-auth.session.v1
+                        - forward-auth.request.v1
+                        - control.admin.v1
                 required:
                   - name
                   - version
                   - stage
+                  - surface
                   - authentication
+                  - capabilities
   /v1/auth/nonce:
     post:
       summary: Issue a five-minute login challenge and browser context cookie

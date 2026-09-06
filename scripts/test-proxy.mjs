@@ -158,6 +158,10 @@ try {
   assert.match(publicPage.text, /\/i18n\.js/);
   assert.equal((await http('/i18n.js')).status, 200);
   assert.doesNotMatch(publicPage.text, /panel.js|Users &amp; wallets/);
+  const publicVersion = JSON.parse((await http('/version')).text);
+  assert.equal(publicVersion.surface, 'public');
+  assert.ok(publicVersion.capabilities.includes('forward-auth.request.v1'));
+  assert.ok(!publicVersion.capabilities.includes('control.admin.v1'));
   if (quique) {
     assert.match(publicPage.text, /app\.quique\.es/);
     assert.match(publicPage.text, /solana:mainnet/);
@@ -179,6 +183,11 @@ try {
   assert.match(adminPage.text, /Users &amp; wallets/);
   assert.match(adminPage.text, /\/i18n\.js/);
   assert.equal((await http('/i18n.js', { internal: true })).status, 200);
+  const adminVersion = JSON.parse(
+    (await http('/version', { internal: true })).text,
+  );
+  assert.equal(adminVersion.surface, 'admin');
+  assert.ok(adminVersion.capabilities.includes('control.admin.v1'));
   const services = JSON.parse(compose('config', '--format', 'json')).services;
   assert.equal(services['admin-panel'].ports[0].host_ip, '127.0.0.1');
   assert.equal(services['admin-api'].ports, undefined);

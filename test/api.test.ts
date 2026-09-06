@@ -26,11 +26,19 @@ test('health, version and unconfigured authentication expose the expected contra
   assert.deepEqual(health.json(), { status: 'ok' });
   assert.equal(health.headers['cache-control'], 'no-store');
   assert.notEqual(health.headers['x-request-id'], 'client-controlled');
-  assert.equal(
-    (await app.inject('/version')).json<{ authentication: boolean }>()
-      .authentication,
-    true,
-  );
+  assert.deepEqual((await app.inject('/version')).json(), {
+    name: 'gozne',
+    version: '0.1.0-dev.11',
+    stage: 'alpha',
+    surface: 'public',
+    authentication: true,
+    capabilities: [
+      'auth.evm.siwe.v1',
+      'auth.solana.siws.v1',
+      'forward-auth.session.v1',
+      'forward-auth.request.v1',
+    ],
+  });
   const denied = await app.inject({
     url: '/v1/auth/validate?application=docs',
     headers: {

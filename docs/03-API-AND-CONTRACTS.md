@@ -12,7 +12,7 @@ uses ISO 8601.
 | Method | Route                                | Purpose                         | Requirement              |
 | ------ | ------------------------------------ | ------------------------------- | ------------------------ |
 | GET    | `/healthz`                           | SQLite read health              | None                     |
-| GET    | `/version`                           | Build version and alpha stage   | None                     |
+| GET    | `/version`                           | Build and capability metadata   | None                     |
 | POST   | `/v1/auth/nonce`                     | Issue login challenge           | Allowed origin and chain |
 | POST   | `/v1/auth/verify`                    | Verify proof and create session | Login context cookie     |
 | GET    | `/v1/auth/me`                        | Current session and CSRF token  | Session                  |
@@ -43,6 +43,19 @@ Both `verify` and `me` return `id`, `identity`, `network`, `address`,
 hour; guest sessions expire at the earlier of one hour or their invitation
 deadline. The cookie may outlive a guest's authorization; the server remains
 authoritative.
+
+## Capability discovery
+
+`GET /version` is available through both bundled HTTPS surfaces. It returns the
+running version, `public` or `admin` surface, and stable capability identifiers.
+Integrations that need method-aware writes must require
+`forward-auth.request.v1` before switching their protected upstream. The admin
+surface additionally advertises `control.admin.v1`. Unknown capabilities must be
+ignored so Gozne can add compatible behavior without breaking consumers.
+
+This endpoint reports code capabilities, not operational readiness. Check
+`/healthz`, validate the deployment topology, and complete a real authenticated
+request before promoting a release.
 
 ## Cookies and mutation protection
 

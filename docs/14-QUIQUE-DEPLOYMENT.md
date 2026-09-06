@@ -120,3 +120,8 @@ routes change. Run
 after building both repositories' images to test real Gozne with the new
 application. It creates only temporary synthetic identities and a disposable
 Compose project.
+
+Before changing the protected upstream, read `/version` through the public HTTPS
+origin and require `forward-auth.request.v1` in `capabilities`. A missing
+capability means the gateway is too old for Research Lab mutations; keep the
+existing upstream and fail the deployment before routing user traffic.
